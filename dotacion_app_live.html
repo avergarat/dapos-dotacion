@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>DAPOS · Sistema de Revisión de Dotación</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --ink:#0d1117;--ink2:#1c2a3a;--mist:#f0f4f9;--white:#ffffff;
+  --teal:#0a7c6e;--teal2:#12b89e;--teal3:#e0f5f2;
+  --red:#c0392b;--red2:#fdecea;
+  --amber:#c47c0a;--amber2:#fef3dc;
+  --blue:#1a56b0;--blue2:#e8f0fe;
+  --border:#dde4ee;--shadow:0 2px 16px rgba(13,17,23,.08);
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--mist);color:var(--ink);min-height:100vh;font-size:14px}
+
+/* ─── LOGIN ─── */
+#login{position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;z-index:999}
+#login::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 60% 40%,rgba(10,124,110,.25) 0%,transparent 70%)}
+.lbox{position:relative;z-index:1;width:400px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:48px 40px}
+.lbox h1{font-family:'DM Serif Display',serif;font-size:2rem;font-weight:800;color:#fff;letter-spacing:-.5px;margin-bottom:4px}
+.lbox .lsub{font-size:.72rem;letter-spacing:3px;text-transform:uppercase;color:var(--teal2);margin-bottom:36px}
+.lbox label{display:block;font-size:.7rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:7px;margin-top:18px}
+.lbox input{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 15px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.9rem;transition:.2s}
+.lbox input:focus{outline:none;border-color:var(--teal2)}
+.lbox input::placeholder{color:rgba(255,255,255,.2)}
+.lbtn{width:100%;margin-top:26px;padding:14px;background:var(--teal);border:none;border-radius:10px;color:#fff;font-family:'DM Serif Display',serif;font-size:.95rem;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:.2s}
+.lbtn:hover{background:var(--teal2)}
+.lerr{min-height:18px;text-align:center;font-size:.78rem;color:#ff7070;margin-top:12px}
+.lhint{text-align:center;font-size:.68rem;color:rgba(255,255,255,.2);margin-top:16px}
+
+/* ─── LAYOUT ─── */
+#app{display:none;min-height:100vh}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:220px;background:var(--ink2);display:flex;flex-direction:column;z-index:100}
+.sbrand{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sbrand .sname{font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:800;color:#fff}
+.sbrand .sdept{font-size:.65rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--teal2);margin-top:3px}
+.snav{flex:1;padding:16px 10px;display:flex;flex-direction:column;gap:3px}
+.si{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;color:rgba(255,255,255,.5);font-size:.83rem;font-weight:500;cursor:pointer;transition:.15s;user-select:none}
+.si:hover{background:rgba(255,255,255,.06);color:#fff}
+.si.on{background:var(--teal);color:#fff}
+.si svg{width:16px;height:16px;flex-shrink:0;stroke-width:2}
+.sfoot{padding:16px 14px;border-top:1px solid rgba(255,255,255,.06)}
+.susr{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.savt{width:34px;height:34px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;color:#fff;flex-shrink:0}
+.suname{font-size:.8rem;color:rgba(255,255,255,.7);font-weight:500}
+.surole{font-size:.65rem;color:var(--teal2)}
+.slgout{width:100%;padding:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:7px;color:rgba(255,255,255,.4);font-size:.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;transition:.2s}
+.slgout:hover{background:rgba(192,57,43,.2);border-color:var(--red);color:#ff8080}
+
+.main{margin-left:220px;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.tbtitle{font-family:'DM Serif Display',serif;font-size:1.25rem;font-weight:700;color:var(--ink)}
+.tbsub{font-size:.72rem;color:#8896aa;margin-top:2px}
+.tbdate{font-size:.75rem;color:#8896aa}
+.content{padding:24px 28px;flex:1}
+.panel{display:none}.panel.on{display:block}
+
+/* ─── CARDS / STATS ─── */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.sc{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);border-top:3px solid transparent;transition:.2s}
+.sc.t{border-top-color:var(--teal)}.sc.g{border-top-color:#1a7a4a}.sc.r{border-top-color:var(--red)}.sc.a{border-top-color:var(--amber)}
+.sclabel{font-size:.68rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#8896aa}
+.scval{font-family:'DM Serif Display',serif;font-size:2rem;font-weight:800;color:var(--ink);margin-top:4px;line-height:1}
+.scsub{font-size:.72rem;color:#8896aa;margin-top:4px}
+
+/* ─── CESFAM SELECTOR ─── */
+.cesfam-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.ccard{background:var(--white);border-radius:var(--radius);padding:18px 16px;box-shadow:var(--shadow);cursor:pointer;border:2px solid transparent;transition:.2s;position:relative;overflow:hidden}
+.ccard:hover{border-color:var(--teal2);transform:translateY(-2px)}
+.ccard.sel{border-color:var(--teal);background:var(--teal3)}
+.ccard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--teal),var(--teal2))}
+.ccname{font-family:'DM Serif Display',serif;font-size:.85rem;font-weight:700;color:var(--ink);line-height:1.3;margin-bottom:6px}
+.ccstat{font-size:.72rem;color:#8896aa}
+.ccbadge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.68rem;font-weight:600;margin-top:6px}
+
+/* ─── PANEL DETALLE CESFAM ─── */
+.det-header{background:var(--white);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between}
+.det-title{font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:800;color:var(--ink)}
+.det-sub{font-size:.75rem;color:#8896aa;margin-top:3px}
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;background:var(--white);border-radius:10px;padding:5px;box-shadow:var(--shadow);width:fit-content}
+.tab{padding:8px 18px;border-radius:7px;font-size:.8rem;font-weight:500;cursor:pointer;color:#8896aa;transition:.15s;white-space:nowrap}
+.tab.on{background:var(--teal);color:#fff}
+.tab:hover:not(.on){background:var(--mist);color:var(--ink)}
+
+/* ─── TABLE ─── */
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.ch{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chtitle{font-weight:600;font-size:.9rem;color:var(--ink)}
+.searchrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.searchrow input,.searchrow select{border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-size:.82rem;font-family:'DM Sans',sans-serif;color:var(--ink)}
+.searchrow input:focus,.searchrow select:focus{outline:none;border-color:var(--teal)}
+table{width:100%;border-collapse:collapse}
+thead{background:#f8f9fb}
+th{padding:10px 14px;text-align:left;font-size:.68rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#8896aa;white-space:nowrap}
+td{padding:10px 14px;border-top:1px solid var(--border);color:var(--ink);font-size:.82rem}
+tr:hover td{background:#fafbfd}
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:.68rem;font-weight:600;white-space:nowrap}
+.bg{background:#d4f7e7;color:#1a7a4a}.br{background:var(--red2);color:var(--red)}.ba{background:var(--amber2);color:var(--amber)}.bb{background:var(--blue2);color:var(--blue)}
+.tfoot{padding:10px 18px;font-size:.72rem;color:#8896aa;border-top:1px solid var(--border)}
+
+/* ─── UNIDADES PANEL ─── */
+.u-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.u-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.u-head{padding:14px 16px;background:var(--ink2);display:flex;align-items:center;justify-content:space-between}
+.u-name{font-family:'DM Serif Display',serif;font-size:.85rem;font-weight:700;color:#fff}
+.u-count{font-size:.75rem;color:var(--teal2)}
+.u-body{padding:12px}
+.ud-row{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:7px;margin-bottom:4px;background:var(--mist);font-size:.78rem}
+.ud-name{color:var(--ink);font-weight:500}
+.ud-n{font-weight:700;color:var(--teal)}
+.brecha-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.brecha-ok{background:#1a7a4a}.brecha-warn{background:var(--amber)}.brecha-err{background:var(--red)}
+
+/* ─── RESUMEN BRECHAS ─── */
+.brecha-panel{margin-top:20px}
+.brecha-table{width:100%;border-collapse:collapse}
+.brecha-table th{background:var(--ink2);color:#fff;padding:10px 14px;font-size:.7rem;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.brecha-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:.8rem}
+.brecha-table tr:hover td{background:#fafbfd}
+.brecha-bar{display:flex;align-items:center;gap:8px}
+.bbar-track{flex:1;height:7px;background:#eef0f5;border-radius:99px;overflow:hidden;min-width:80px}
+.bbar-fill{height:100%;border-radius:99px;transition:width .6s}
+.ok .bbar-fill{background:var(--teal)}.warn .bbar-fill{background:var(--amber)}.err .bbar-fill{background:var(--red)}
+
+/* ─── BTNS ─── */
+.btn{padding:8px 16px;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-p{background:var(--teal);color:#fff}.btn-p:hover{background:var(--teal2)}
+.btn-s{background:var(--mist);color:var(--ink);border:1px solid var(--border)}.btn-s:hover{background:var(--border)}
+.btn-pdf{background:var(--red);color:#fff}.btn-pdf:hover{opacity:.85}
+
+/* ─── MODAL ─── */
+.mover{display:none;position:fixed;inset:0;background:rgba(13,17,23,.6);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.mover.open{display:flex}
+.modal{background:#fff;border-radius:18px;padding:32px;width:580px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.25)}
+.modal h2{font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:800;color:var(--ink);margin-bottom:20px}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fg label{font-size:.68rem;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#8896aa}
+.fg input,.fg select,.fg textarea{border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:'DM Sans',sans-serif;font-size:.85rem;color:var(--ink)}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--teal)}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mactions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* ─── ACTA ─── */
+.acta-wrap{max-width:700px}
+.acta-box{background:var(--white);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);margin-bottom:20px}
+.acta-box h3{font-family:'DM Serif Display',serif;font-size:1rem;font-weight:700;color:var(--ink);margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid var(--teal)}
+.acta-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.acta-preview{background:var(--teal3);border-left:4px solid var(--teal);border-radius:0 8px 8px 0;padding:14px 18px;font-size:.82rem;color:var(--ink2);margin-bottom:20px}
+.acta-preview strong{color:var(--teal)}
+
+/* ─── CHARTS ─── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-box{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.chart-box h4{font-family:'DM Serif Display',serif;font-size:.85rem;font-weight:700;color:var(--ink);margin-bottom:16px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:.78rem}
+.bar-lbl{width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.bar-tr{flex:1;height:9px;background:#eef0f5;border-radius:99px;overflow:hidden}
+.bar-f{height:100%;border-radius:99px;background:var(--teal);transition:width .7s cubic-bezier(.4,0,.2,1)}
+.bar-f.am{background:var(--amber)}.bar-f.re{background:var(--red)}
+.bar-n{width:28px;text-align:right;font-weight:600;color:var(--ink)}
+
+@media(max-width:960px){
+  .sidebar{width:56px}.sbrand .sname,.sbrand .sdept,.si span,.sfoot .suname,.sfoot .surole,.slgout{display:none}
+  .main{margin-left:56px}
+  .sgrid,.cesfam-grid{grid-template-columns:1fr 1fr}
+  .u-grid{grid-template-columns:1fr}
+  .charts-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div id="login">
+  <div class="lbox">
+    <h1>DAPOS</h1>
+    <div class="lsub">Sistema de Dotación · DAP Central</div>
+    <label>Usuario</label>
+    <input id="lu" type="text" placeholder="usuario" autocomplete="username">
+    <label>Contraseña</label>
+    <input id="lp" type="password" placeholder="••••••" autocomplete="current-password">
+    <button class="lbtn" onclick="doLogin()">Ingresar</button>
+    <div class="lerr" id="lerr"></div>
+    <div class="lhint">admin / admin123 &nbsp;·&nbsp; visor / visor123</div>
+  </div>
+</div>
+
+<!-- ═══════ APP ═══════ -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sbrand"><div class="sname">DAPOS</div><div class="sdept">DAP · Dotación</div></div>
+    <nav class="snav">
+      <div class="si on" onclick="nav('dashboard',this)">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Dashboard</span>
+      </div>
+      <div class="si" onclick="nav('cesfam',this)">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Centros de Salud</span>
+      </div>
+      <div class="si" onclick="nav('brechas',this)">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Brechas</span>
+      </div>
+      <div class="si" onclick="nav('dotacion',this)">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        <span>Dotación</span>
+      </div>
+      <div class="si" onclick="nav('acta',this)">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>Acta PDF</span>
+      </div>
+    </nav>
+    <div class="sfoot">
+      <div class="susr"><div class="savt" id="savt">AD</div><div><div class="suname" id="suname">Administrador</div><div class="surole" id="surole">Admin</div></div></div>
+      <button class="slgout" onclick="doLogout()">⏻ Salir</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div><div class="tbtitle" id="tbtitle">Dashboard</div><div class="tbsub" id="tbsub">Resumen general DAP Central · Marzo 2025</div></div>
+      <div class="tbdate" id="tbdate"></div>
+    </div>
+    <div class="content">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="panel on" id="p-dashboard">
+        <div class="sgrid">
+          <div class="sc t"><div class="sclabel">Total Dotación</div><div class="scval" id="s-total">0</div><div class="scsub">funcionarios registrados</div></div>
+          <div class="sc g"><div class="sclabel">Titulares</div><div class="scval" id="s-tit">0</div><div class="scsub">planta titular</div></div>
+          <div class="sc a"><div class="sclabel">Contratados</div><div class="scval" id="s-cont">0</div><div class="scsub">calidad contratado</div></div>
+          <div class="sc r"><div class="sclabel">Suplentes</div><div class="scval" id="s-sup">0</div><div class="scsub">calidad suplente</div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-box"><h4>Funcionarios por Centro de Salud</h4><div id="ch-cesfam"></div></div>
+          <div class="chart-box"><h4>Top Cargos DAP</h4><div id="ch-cargo"></div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="chtitle">Distribución por Calidad Jurídica · Todos los Centros</div></div>
+          <div style="overflow-x:auto"><table>
+            <thead><tr><th>Centro de Salud</th><th>Total</th><th>Titulares</th><th>Contratados</th><th>Suplentes</th><th>% Contratados</th></tr></thead>
+            <tbody id="tb-resumen"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ── CENTROS DE SALUD ── -->
+      <div class="panel" id="p-cesfam">
+        <div id="cesfam-list">
+          <div style="margin-bottom:18px;font-size:.82rem;color:#8896aa">Selecciona un centro de salud para revisar su dotación por unidad:</div>
+          <div class="cesfam-grid" id="cgrid"></div>
+        </div>
+        <div id="cesfam-det" style="display:none">
+          <button class="btn btn-s" style="margin-bottom:18px" onclick="volverCesfam()">← Volver a centros</button>
+          <div class="det-header">
+            <div><div class="det-title" id="det-nombre"></div><div class="det-sub" id="det-stats"></div></div>
+            <button class="btn btn-pdf" onclick="generarActaCesfam()">📄 Generar Acta PDF</button>
+          </div>
+          <div class="tab-bar" id="tab-bar"></div>
+          <div id="tab-content"></div>
+        </div>
+      </div>
+
+      <!-- ── BRECHAS ── -->
+      <div class="panel" id="p-brechas">
+        <div class="card" style="margin-bottom:20px">
+          <div class="ch">
+            <div class="chtitle">Análisis de Brechas por Centro y Unidad</div>
+            <div class="searchrow">
+              <select id="br-cesfam" onchange="renderBrechas()">
+                <option value="">Todos los centros</option>
+              </select>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="brecha-table">
+              <thead><tr><th>Centro</th><th>Unidad</th><th>Unidades de Desempeño definidas</th><th>Personal asignado</th><th>Estado</th></tr></thead>
+              <tbody id="tb-brechas"></tbody>
+            </table>
+          </div>
+          <div class="tfoot" id="br-count"></div>
+        </div>
+      </div>
+
+      <!-- ── DOTACIÓN COMPLETA ── -->
+      <div class="panel" id="p-dotacion">
+        <div class="card">
+          <div class="ch">
+            <div class="chtitle">Dotación Completa · Marzo 2025</div>
+            <div class="searchrow">
+              <input type="text" id="d-search" placeholder="Buscar RUT o nombre..." oninput="renderDot()">
+              <select id="d-cesfam" onchange="renderDot()"><option value="">Todos los centros</option></select>
+              <select id="d-calidad" onchange="renderDot()">
+                <option value="">Todas las calidades</option>
+                <option>TITULARES</option><option>CONTRATADOS</option><option>SUPLENTE</option>
+              </select>
+              <button class="btn btn-pdf" onclick="exportarDotPDF()">📄 PDF</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>RUT</th><th>Nombre</th><th>Cargo</th><th>CESFAM</th><th>Unidad</th><th>Horas</th><th>Calidad</th><th>Inicio</th></tr></thead>
+              <tbody id="tb-dot"></tbody>
+            </table>
+          </div>
+          <div class="tfoot" id="d-count"></div>
+        </div>
+      </div>
+
+      <!-- ── ACTA PDF ── -->
+      <div class="panel" id="p-acta">
+        <div class="acta-wrap">
+          <div class="acta-box">
+            <h3>Generar Acta de Revisión de Dotación</h3>
+            <div class="acta-grid">
+              <div class="fg"><label>Centro de Salud</label><select id="a-cesfam" onchange="updateActaPreview()"><option value="">Seleccionar...</option></select></div>
+              <div class="fg"><label>Unidad (opcional)</label><select id="a-unidad" onchange="updateActaPreview()"><option value="">Todas las unidades</option></select></div>
+              <div class="fg"><label>Nombre del Revisor</label><input id="a-revisor" type="text" placeholder="Nombre completo" oninput="updateActaPreview()"></div>
+              <div class="fg"><label>Cargo del Revisor</label><input id="a-cargo" type="text" placeholder="Cargo / Función" oninput="updateActaPreview()"></div>
+              <div class="fg"><label>Fecha de Revisión</label><input id="a-fecha" type="date" oninput="updateActaPreview()"></div>
+              <div class="fg"><label>N° Resolución / Referencia</label><input id="a-ref" type="text" placeholder="Ej: 2025-001" oninput="updateActaPreview()"></div>
+            </div>
+            <div class="fg"><label>Observaciones</label><textarea id="a-obs" rows="3" placeholder="Observaciones generales..." oninput="updateActaPreview()"></textarea></div>
+          </div>
+          <div class="acta-preview" id="a-preview">
+            Selecciona un centro para previsualizar el acta.
+          </div>
+          <button class="btn btn-pdf" style="width:100%;padding:14px;font-size:.95rem;justify-content:center" onclick="generarActaPDF()">
+            📄 Descargar Acta en PDF
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ══════════════════════════════════════
+//  DATOS EMBEBIDOS
+// ══════════════════════════════════════
+const ESTRUCTURA = {"CESFAM N. VOULLIEME":{"APOYO CLINICO":["ATENCION DOMICILIARIA","TOMA DE MUESTRAS","VACUNATORIO"],"FARMACIA":["ATENCION FARMACEUTICA","VENTANA"],"TRANSVERSAL":["ESPACIOS AMIGABLES","AT. DOMICILIARIA","SIGGES","ESTADISTICA","CIRUGIA MENOR","SALA REHABILITACION","VIDA SANA","AUXILIAR","BODEGA DE ALIMENTOS","SALA ERA","MAMAV","SALA IRA","COMISIÓN DE ESTUDIOS","CONDUCTOR","DUPLA ACOMPAÑAMIENTO","MEJOR NIÑEZ"],"SECTOR CELESTE":["DENTAL","SOME"],"DIRECCION":["SUBDIRECCION TECNICA","DIRECTOR/A","SUBDIRECCION DE GESTION ADMINISTRATIVA"],"SECTOR AMARILLO":["DENTAL","SOME"],"SOME CENTRAL":[],"SECTOR VERDE":["DENTAL","SOME"]},"CESFAM AHUES":{"APOYO CLINICO":["APOYO CLINICO"],"DIRECCION":["SUBDIRECCION TECNICA","SUBDIRECCION DE GESTION ADMINISTRATIVA","DIRECCION","DIRECTOR/A"],"SOME CENTRAL":["SOME CENTRAL"],"TRANSVERSAL":["SALA IRA","SALA REHABILITACION","AT. DOMICILIARIA","VIDA SANA","TRANSVERSAL","SALA ESTIMULACION TRANSVERSAL","SALA ERA","MEJOR NIÑEZ","APOYO CLINICO-VACUNATORIO","BODEGA DE ALIMENTOS (LECHE)","MAMAV","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","DUPLA ACOMPAÑAMIENTO","ESPACIOS AMIGABLES","ESTADISTICA","SIGGES","AUXILIAR"],"SECTOR BLANCO":["DENTAL BLANCO","SOME"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"SECTOR VERDE":["DENTAL VERDE","SOME"],"FARMACIA":["FARMACIA"],"CECOSF":["CECOSF"]},"CESFAM MAIPU":{"SECTOR BLANCO":["DENTAL BLANCO","SOME"],"SOME CENTRAL":["SOME CENTRAL"],"TRANSVERSAL":["SALA ESTIMULACION TRANSVERSAL","SALA ERA","APOYO CLINICO-VACUNATORIO","SALA AIDIA","COMISION","OIRS","BODEGA DE ALIMENTOS (LECHE)","SALA IRA","MAMAV","TRANSVERSAL","SALA REHABILITACION","ECICEP","AT. DOMICILIARIA","BODEGA DE ALIMENTOS (LECHE)-SECTOR BLANCO (31.5 HRS)","DENTAL-ORTODONCISTA TRANSVERSAL","DUPLA ACOMPAÑAMIENTO","MEJOR NIÑEZ","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","SIGGES","VIDA SANA","AUXILIAR"],"APOYO CLINICO":["APOYO CLINICO"],"DIRECCION":["SUBDIRECCION DE GESTION ADMINISTRATIVA","SUBDIRECCION TECNICA","DIRECCION","DIRECTOR/A"],"SECTOR CELESTE":["DENTAL CELESTE","SOME"],"FARMACIA":["FARMACIA"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"SECTOR VERDE":["DENTAL VERDE","SOME"]},"CESFAM A.M. JURICIC":{"TRANSVERSAL":["SALA IRA","SALA ESTIMULACION TRANSVERSAL","TRANSVERSAL","AT. DOMICILIARIA","SALA ERA","MAMAV","BODEGA DE ALIMENTOS (LECHE)","APOYO CLINICO-VACUNATORIO","ECICEP","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","DUPLA ACOMPAÑAMIENTO","ESPACIOS AMIGABLES","ESTADISTICA","MEJOR NIÑEZ","SALA REHABILITACION","SIGGES","VIDA SANA","AUXILIAR"],"SECTOR CELESTE":["DENTAL","SOME"],"APOYO CLINICO":["APOYO CLINICO"],"DIRECCION":["SUBDIRECCION DE GESTION ADMINISTRATIVA","DIRECCION","SUBDIRECCION TECNICA","SECRETARIA DIRECCIÓN","DIRECTOR/A"],"SECTOR VERDE":["DENTAL","SOME"],"FARMACIA":["FARMACIA"],"SOME CENTRAL":["SOME CENTRAL"],"SECTOR AMARILLO":["DENTAL","SOME"],"SAPU":["SAPU (3° TURNO)"]},"CESFAM CHUCHUNCO":{"TRANSVERSAL":["SALA ESTIMULACION TRANSVERSAL","AT. DOMICILIARIA","BODEGA DE ALIMENTOS (LECHE)","APOYO CLINICO-VACUNATORIO","TRANSVERSAL","MAMAV","COMISION","SALA ERA","DUPLA ACOMPAÑAMIENTO","SALA IRA","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","MEJOR NIÑEZ","SALA REHABILITACION","SIGGES","VIDA SANA","AUXILIAR"],"APOYO CLINICO":["APOYO CLINICO"],"DIRECCION":["SUBDIRECCION DE GESTION ADMINISTRATIVA","SUBDIRECCION TECNICA","DIRECCION","DIRECTOR/A"],"CECOSF":["CECOSF","CECOSF-CESFAM AMARILLO","DENTAL","FARMACIA"],"SAPU":["SAPU (3° TURNO)"],"FARMACIA":["FARMACIA"],"SECTOR VERDE":["DENTAL","SOME"],"SECTOR AMARILLO":["DENTAL","SOME"],"SECTOR AZUL":["DENTAL","SOME"],"SOME CENTRAL":["SOME CENTRAL"]},"CESFAM LAS MERCEDES":{"DIRECCION":["SUBDIRECCION TECNICA","DIRECCION","SUBDIRECCION DE GESTION ADMINISTRATIVA","SECRETARIA DIRECCIÓN","DIRECTOR/A"],"FARMACIA":["FARMACIA"],"SECTOR AZUL":["DENTAL AZUL","SOME"],"TRANSVERSAL":["SALA ESTIMULACION TRANSVERSAL","MEJOR NIÑEZ","SALA IRA","COMISION","SALA REHABILITACION","APOYO CLINICO-VACUNATORIO","TRANSVERSAL","SALA ERA","BODEGA DE ALIMENTOS (LECHE)","DENTAL AZUL RAYOS","AT. DOMICILIARIA","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","DUPLA ACOMPAÑAMIENTO","ESPACIOS AMIGABLES","ESTADISTICA","MAMAV","SIGGES","VIDA SANA","AUXILIAR"],"APOYO CLINICO":["APOYO CLINICO"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"SECTOR VERDE":["DENTAL VERDE","SOME"],"SOME CENTRAL":["SOME CENTRAL"]},"CESFAM N°1":{"SECTOR VERDE":["DENTAL VERDE","SOME"],"TRANSVERSAL":["APOYO CLINICO-VACUNATORIO","SALA REHABILITACION","MEJOR NIÑEZ","VIDA SANA","OIRS","SALA ERA","BODEGA DE ALIMENTOS (LECHE)","MAMAV","SALA ESTIMULACION TRANSVERSAL","DENTAL","TRANSVERSAL","DUPLA ACOMPAÑAMIENTO","SALA IRA","AT. DOMICILIARIA","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","SIGGES","AUXILIAR"],"DIRECCION":["SUBDIRECCION TECNICA","SUBDIRECCION DE GESTION ADMINISTRATIVA","DIRECCION","DIRECTOR/A"],"FARMACIA":["FARMACIA"],"APOYO CLINICO":["APOYO CLINICO"],"SECTOR AZUL":["DENTAL AZUL","SOME"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"SOME CENTRAL":["SOME CENTRAL"],"SAPU":["SAPU (3° TURNO)"]},"CESFAM PADRE VICENTE IRARRAZAVAL":{"FARMACIA":["FARMACIA"],"APOYO CLINICO":["APOYO CLINICO"],"TRANSVERSAL":["TRANSVERSAL","SALA ESTIMULACION TRANSVERSAL","ECOGRAFISTA","AT. DOMICILIARIA","BODEGA DE ALIMENTOS (LECHE)","SALA ERA","DUPLA ACOMPAÑAMIENTO","APOYO CLINICO-VACUNATORIO","MAMAV","SALA REHABILITACION","OIRS","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","MEJOR NIÑEZ","SALA IRA","SIGGES","VIDA SANA","AUXILIAR"],"DIRECCION":["DIRECCION","SUBDIRECCION DE GESTION ADMINISTRATIVA","SUBDIRECCION TECNICA","DIRECTOR/A"],"SOME CENTRAL":["SOME CENTRAL"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"SECTOR AZUL":["DENTAL AZUL","SOME"],"SECTOR VERDE":["DENTAL VERDE","SOME"]},"CESFAM SOFIA PINCHEIRA":{"APOYO CLINICO":["APOYO CLINICO"],"DIRECCION":["SUBDIRECCION DE GESTION ADMINISTRATIVA","SUBDIRECCION TECNICA","SUBDIRECCION GESTION ADMINISTRATIVA","DIRECCION","DIRECTOR/A"],"TRANSVERSAL":["COMISION","ECICEP","MAMAV","DUPLA ACOMPAÑAMIENTO","SAR","VIDA SANA","TRANSVERSAL","APOYO CLINICO-VACUNATORIO","BODEGA DE ALIMENTOS (LECHE)","SALA ESTIMULACION TRANSVERSAL","AT. DOMICILIARIA","MEJOR NIÑEZ","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","SALA ERA","SALA IRA","SALA REHABILITACION","SIGGES","AUXILIAR"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"FARMACIA":["FARMACIA"],"SECTOR BLANCO":["DENTAL BLANCO","SOME"],"SECTOR VERDE":["DENTAL VERDE","SOME"],"SOME CENTRAL":["SOME CENTRAL"]},"CESFAM N°5":{"DIRECCION":["SUBDIRECCION TECNICA","SUBDIRECCION DE GESTION ADMINISTRATIVA","DIRECCION","DIRECTOR/A"],"TRANSVERSAL":["APOYO CLINICO-VACUNATORIO","DUPLA ACOMPAÑAMIENTO","TRANSVERSAL- SECTOR ROJO","SALA ERA","SALA IRA","TRANSVERSAL","SALA REHABILITACION","VIDA SANA","ESTA EN DAP","MAMAV","SALA ESTIMULACION TRANSVERSAL","MEJOR NIÑEZ","BODEGA DE ALIMENTOS (LECHE)","AT. DOMICILIARIA","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","SIGGES","AUXILIAR"],"FARMACIA":["FARMACIA"],"SECTOR LILA":["DENTAL LILA","SOME"],"APOYO CLINICO":["APOYO CLINICO"],"SECTOR VERDE":["DENTAL VERDE","SOME"],"SECTOR BLANCO":["DENTAL BLANCO","SOME"],"SECTOR ROJO":["DENTAL ROJO","SOME"],"SOME CENTRAL":["SOME CENTRAL"]},"DAP CENTRAL":{"DIRECCION":["DIRECCION","SUBDIRECCION DE GESTION ADMINISTRATIVA"],"TRANSVERSAL":["TRANSVERSAL","COMISION"],"APOYO CLINICO":["APOYO CLINICO"]}};
+const API_URL = 'https://script.google.com/macros/s/AKfycbxcbEQaroe_fzCuQFS4SdZkww-4BPPOI8CE3qx2kyTaM0AYw44D--xGzECbYIB_FeLXzQ/exec';
+let FUNC = [];
+
+async function cargarDatos() {
+  try {
+    const res = await fetch(API_URL + '?action=getAll');
+    const data = await res.json();
+    FUNC = data.map(f => ({
+      rut_completo: (f['Rut']||'').toString().trim() + '-' + (f['Dv']||'').toString().trim(),
+      nombre: (f['Nombre Funcionario']||'').toString().trim(),
+      planta: (f['Descripción Planta']||'').toString().trim(),
+      calidad: (f['Descripción Calidad Jurídica']||'').toString().trim(),
+      horas: (f['Número horas']||'').toString().trim(),
+      cesfam: (f['Descripción Unidad']||'').toString().trim(),
+      unidad2: (f['Descripción Unidad 2']||'').toString().trim(),
+      cargo: (f['Descripción Cargo']||'').toString().trim(),
+      inicio: (f['Fecha Inicio Contrato']||'').toString().slice(0,10),
+      genero: (f['Género']||'').toString().trim()
+    }));
+    initApp();
+  } catch(e) {
+    document.getElementById('lerr').textContent = '⚠ Error al cargar datos. Verifica la URL del Apps Script.';
+  }
+}
+
+// ══════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════
+const USERS = {admin:{pass:'admin123',role:'Administrador'},visor:{pass:'visor123',role:'Visualizador'}};
+let currentUser = null;
+
+function doLogin(){
+  const u=document.getElementById('lu').value.trim();
+  const p=document.getElementById('lp').value;
+  if(USERS[u]&&USERS[u].pass===p){
+    currentUser={user:u,...USERS[u]};
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('savt').textContent=u.slice(0,2).toUpperCase();
+    document.getElementById('suname').textContent=USERS[u].role;
+    document.getElementById('surole').textContent=u;
+    document.getElementById('tbdate').textContent=new Date().toLocaleDateString('es-CL',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    document.getElementById('a-fecha').value=new Date().toISOString().slice(0,10);
+    cargarDatos();
+  } else {
+    document.getElementById('lerr').textContent='Usuario o contraseña incorrectos';
+  }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+function doLogout(){
+  currentUser=null;
+  document.getElementById('login').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('lu').value='';document.getElementById('lp').value='';
+  document.getElementById('lerr').textContent='';
+}
+
+// ══════════════════════════════════════
+//  NAV
+// ══════════════════════════════════════
+const PANELS={dashboard:'p-dashboard',cesfam:'p-cesfam',brechas:'p-brechas',dotacion:'p-dotacion',acta:'p-acta'};
+const TITLES={dashboard:['Dashboard','Resumen general DAP Central · Marzo 2025'],
+  cesfam:['Centros de Salud','Selecciona un centro para revisar su dotación'],
+  brechas:['Análisis de Brechas','Detección de brechas por unidad'],
+  dotacion:['Dotación Completa','1.882 funcionarios · Marzo 2025'],
+  acta:['Generar Acta PDF','Documento formal de revisión de dotación']};
+
+function nav(id,el){
+  document.querySelectorAll('.si').forEach(s=>s.classList.remove('on'));
+  if(el)el.classList.add('on');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById(PANELS[id]).classList.add('on');
+  document.getElementById('tbtitle').textContent=TITLES[id][0];
+  document.getElementById('tbsub').textContent=TITLES[id][1];
+}
+
+// ══════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════
+function byC(c){return c?FUNC.filter(f=>f.cesfam===c):FUNC}
+const CENTROS=Object.keys(ESTRUCTURA).sort();
+
+function calBadge(c){
+  if(c==='TITULARES')return '<span class="badge bg">TITULAR</span>';
+  if(c==='CONTRATADOS')return '<span class="badge ba">CONTRATADO</span>';
+  if(c==='SUPLENTE')return '<span class="badge br">SUPLENTE</span>';
+  return '<span class="badge">'+c+'</span>';
+}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+function initApp(){
+  renderDashboard();
+  renderCesfamGrid();
+  renderBrechasInit();
+  renderDotInit();
+  initActa();
+}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  document.getElementById('s-total').textContent=FUNC.length;
+  document.getElementById('s-tit').textContent=FUNC.filter(f=>f.calidad==='TITULARES').length;
+  document.getElementById('s-cont').textContent=FUNC.filter(f=>f.calidad==='CONTRATADOS').length;
+  document.getElementById('s-sup').textContent=FUNC.filter(f=>f.calidad==='SUPLENTE').length;
+
+  // Chart CESFAM
+  const cc=document.getElementById('ch-cesfam'); cc.innerHTML='';
+  const max=Math.max(...CENTROS.map(c=>byC(c).length));
+  CENTROS.forEach(c=>{
+    const n=byC(c).length;
+    const short=c.replace('CESFAM ','').replace('CES ','CES ');
+    cc.innerHTML+=`<div class="bar-row"><div class="bar-lbl" title="${c}">${short}</div><div class="bar-tr"><div class="bar-f" style="width:${Math.round(n/max*100)}%"></div></div><div class="bar-n">${n}</div></div>`;
+  });
+
+  // Chart Cargos Top 10
+  const cargoMap={};
+  FUNC.forEach(f=>{cargoMap[f.cargo]=(cargoMap[f.cargo]||0)+1});
+  const top10=Object.entries(cargoMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxC=top10[0][1];
+  const ccargo=document.getElementById('ch-cargo'); ccargo.innerHTML='';
+  top10.forEach(([c,n])=>{
+    const short=c.length>22?c.slice(0,22)+'…':c;
+    ccargo.innerHTML+=`<div class="bar-row"><div class="bar-lbl" title="${c}">${short}</div><div class="bar-tr"><div class="bar-f am" style="width:${Math.round(n/maxC*100)}%"></div></div><div class="bar-n">${n}</div></div>`;
+  });
+
+  // Tabla resumen
+  const tb=document.getElementById('tb-resumen'); tb.innerHTML='';
+  CENTROS.forEach(c=>{
+    const f=byC(c);
+    const tit=f.filter(x=>x.calidad==='TITULARES').length;
+    const cont=f.filter(x=>x.calidad==='CONTRATADOS').length;
+    const sup=f.filter(x=>x.calidad==='SUPLENTE').length;
+    const pct=f.length?Math.round(cont/f.length*100):0;
+    tb.innerHTML+=`<tr><td><strong>${c}</strong></td><td>${f.length}</td><td>${tit}</td><td>${cont}</td><td>${sup}</td><td><span class="badge ${pct>70?'br':'ba'}">${pct}%</span></td></tr>`;
+  });
+}
+
+// ── CESFAM GRID ──
+function renderCesfamGrid(){
+  const g=document.getElementById('cgrid'); g.innerHTML='';
+  CENTROS.forEach(c=>{
+    const f=byC(c);
+    const unidades=ESTRUCTURA[c]?Object.keys(ESTRUCTURA[c]).length:0;
+    const pct=f.length?Math.round(f.filter(x=>x.calidad==='CONTRATADOS').length/f.length*100):0;
+    g.innerHTML+=`<div class="ccard" onclick="abrirCesfam('${c.replace(/'/g,"\'")}')">
+      <div class="ccname">${c}</div>
+      <div class="ccstat">${f.length} funcionarios · ${unidades} unidades</div>
+      <span class="ccbadge" style="background:${pct>70?'#fdecea':'#e0f5f2'};color:${pct>70?'#c0392b':'#0a7c6e'}">${pct}% contratados</span>
+    </div>`;
+  });
+}
+
+// ── DETALLE CESFAM ──
+let cesfamActual='';
+function abrirCesfam(c){
+  cesfamActual=c;
+  document.getElementById('cesfam-list').style.display='none';
+  document.getElementById('cesfam-det').style.display='block';
+  document.getElementById('det-nombre').textContent=c;
+  const f=byC(c);
+  document.getElementById('det-stats').textContent=`${f.length} funcionarios · ${f.filter(x=>x.calidad==='TITULARES').length} titulares · ${f.filter(x=>x.calidad==='CONTRATADOS').length} contratados · ${f.filter(x=>x.calidad==='SUPLENTE').length} suplentes`;
+  renderTabs(c);
+}
+function volverCesfam(){
+  document.getElementById('cesfam-list').style.display='block';
+  document.getElementById('cesfam-det').style.display='none';
+}
+
+function renderTabs(c){
+  const unidades=ESTRUCTURA[c]?Object.keys(ESTRUCTURA[c]):['TODOS'];
+  const tb=document.getElementById('tab-bar'); tb.innerHTML='';
+  const all=['TODOS',...unidades];
+  all.forEach((u,i)=>{
+    tb.innerHTML+=`<div class="tab ${i===0?'on':''}" onclick="selectTab('${u.replace(/'/g,"\'")}','${c.replace(/'/g,"\'")}',this)">${u}</div>`;
+  });
+  renderTabContent('TODOS',c);
+}
+
+function selectTab(u,c,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  renderTabContent(u,c);
+}
+
+function renderTabContent(u,c){
+  const tc=document.getElementById('tab-content');
+  const f=byC(c);
+  const unidadesEstr=ESTRUCTURA[c]||{};
+
+  if(u==='TODOS'){
+    // Mostrar resumen de todas las unidades
+    let html='<div class="u-grid">';
+    Object.entries(unidadesEstr).forEach(([unidad,desempleos])=>{
+      const fn=f.filter(x=>matchUnidad(x,unidad,desempleos));
+      const bClass=fn.length===0?'brecha-err':fn.length<3?'brecha-warn':'brecha-ok';
+      html+=`<div class="u-card">
+        <div class="u-head"><div class="u-name">${unidad}</div><span class="u-count">${fn.length} pers.</span></div>
+        <div class="u-body">`;
+      desempleos.forEach(ud=>{
+        const n=f.filter(x=>x.unidad2&&x.unidad2.toUpperCase().includes(ud.slice(0,8).toUpperCase())).length;
+        html+=`<div class="ud-row"><div class="ud-name">${ud}</div><div style="display:flex;align-items:center;gap:6px"><div class="brecha-dot ${n===0?'brecha-err':n<2?'brecha-warn':'brecha-ok'}"></div><span class="ud-n">${n}</span></div></div>`;
+      });
+      if(!desempleos.length) html+='<div style="font-size:.75rem;color:#8896aa;padding:8px">Sin sub-unidades definidas</div>';
+      html+='</div></div>';
+    });
+    html+='</div>';
+    tc.innerHTML=html;
+  } else {
+    // Detalle de una unidad específica
+    const desempleos=unidadesEstr[u]||[];
+    let filtrados=f;
+    if(desempleos.length){
+      filtrados=f.filter(x=>desempleos.some(ud=>x.unidad2&&x.unidad2.toUpperCase().includes(ud.slice(0,8).toUpperCase())));
+    }
+    let html=`<div class="card">
+      <div class="ch"><div class="chtitle">Unidad: ${u} — ${filtrados.length} funcionarios</div></div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>RUT</th><th>Nombre</th><th>Cargo</th><th>Unidad de Desempeño</th><th>Horas</th><th>Calidad</th></tr></thead><tbody>`;
+    if(!filtrados.length) html+='<tr><td colspan="6" style="text-align:center;padding:30px;color:#8896aa">No hay funcionarios asignados a esta unidad</td></tr>';
+    filtrados.forEach(x=>{
+      html+=`<tr><td>${x.rut_completo}</td><td>${x.nombre}</td><td>${x.cargo}</td><td>${x.unidad2||'-'}</td><td>${x.horas}</td><td>${calBadge(x.calidad)}</td></tr>`;
+    });
+    html+='</tbody></table></div></div>';
+    tc.innerHTML=html;
+  }
+}
+
+function matchUnidad(f,unidad,desempleos){
+  if(!desempleos||!desempleos.length) return false;
+  return desempleos.some(ud=>f.unidad2&&f.unidad2.toUpperCase().includes(ud.slice(0,8).toUpperCase()));
+}
+
+// ── BRECHAS ──
+function renderBrechasInit(){
+  const sel=document.getElementById('br-cesfam');
+  CENTROS.forEach(c=>sel.innerHTML+=`<option>${c}</option>`);
+  renderBrechas();
+}
+function renderBrechas(){
+  const filtro=document.getElementById('br-cesfam').value;
+  const tb=document.getElementById('tb-brechas'); tb.innerHTML='';
+  let rows=[];
+  const centros=filtro?[filtro]:CENTROS;
+  centros.forEach(c=>{
+    const f=byC(c);
+    const unidades=ESTRUCTURA[c]||{};
+    Object.entries(unidades).forEach(([u,des])=>{
+      const asignados=f.filter(x=>des.some(ud=>x.unidad2&&x.unidad2.toUpperCase().includes(ud.slice(0,8).toUpperCase()))).length;
+      const estado=asignados===0?'BRECHA':asignados<3?'PARCIAL':'OK';
+      rows.push({c,u,des:des.length,asignados,estado});
+    });
+  });
+  rows.sort((a,b)=>a.estado==='BRECHA'?-1:b.estado==='BRECHA'?1:a.estado==='PARCIAL'?-1:1);
+  rows.forEach(r=>{
+    const cls=r.estado==='BRECHA'?'err':r.estado==='PARCIAL'?'warn':'ok';
+    const pct=r.des?Math.min(Math.round(r.asignados/Math.max(r.des,1)*100),100):0;
+    const badge=r.estado==='BRECHA'?'<span class="badge br">⚠ BRECHA</span>':r.estado==='PARCIAL'?'<span class="badge ba">~ PARCIAL</span>':'<span class="badge bg">✓ OK</span>';
+    tb.innerHTML+=`<tr>
+      <td><strong>${r.c}</strong></td><td>${r.u}</td>
+      <td>${r.des} sub-unidades</td>
+      <td><div class="brecha-bar ${cls}"><div class="bbar-track"><div class="bbar-fill" style="width:${pct}%"></div></div><strong>${r.asignados}</strong></div></td>
+      <td>${badge}</td>
+    </tr>`;
+  });
+  document.getElementById('br-count').textContent=`${rows.filter(r=>r.estado==='BRECHA').length} brechas · ${rows.filter(r=>r.estado==='PARCIAL').length} parciales · ${rows.filter(r=>r.estado==='OK').length} OK`;
+}
+
+// ── DOTACIÓN COMPLETA ──
+function renderDotInit(){
+  const sel=document.getElementById('d-cesfam');
+  CENTROS.forEach(c=>sel.innerHTML+=`<option>${c}</option>`);
+  renderDot();
+}
+function renderDot(){
+  const q=(document.getElementById('d-search').value||'').toLowerCase();
+  const c=document.getElementById('d-cesfam').value;
+  const cal=document.getElementById('d-calidad').value;
+  let f=FUNC;
+  if(c)f=f.filter(x=>x.cesfam===c);
+  if(cal)f=f.filter(x=>x.calidad===cal);
+  if(q)f=f.filter(x=>x.nombre.toLowerCase().includes(q)||x.rut_completo.includes(q));
+  const tb=document.getElementById('tb-dot'); tb.innerHTML='';
+  f.slice(0,300).forEach(x=>{
+    tb.innerHTML+=`<tr><td>${x.rut_completo}</td><td>${x.nombre}</td><td>${x.cargo}</td><td>${x.cesfam}</td><td>${x.unidad2||'-'}</td><td>${x.horas}</td><td>${calBadge(x.calidad)}</td><td>${x.inicio||'-'}</td></tr>`;
+  });
+  document.getElementById('d-count').textContent=`Mostrando ${Math.min(f.length,300)} de ${f.length} registros`;
+}
+
+// ── ACTA ──
+function initActa(){
+  const s=document.getElementById('a-cesfam');
+  CENTROS.forEach(c=>s.innerHTML+=`<option>${c}</option>`);
+  s.addEventListener('change',function(){
+    const u=document.getElementById('a-unidad');
+    u.innerHTML='<option value="">Todas las unidades</option>';
+    if(this.value&&ESTRUCTURA[this.value]){
+      Object.keys(ESTRUCTURA[this.value]).forEach(un=>u.innerHTML+=`<option>${un}</option>`);
+    }
+    updateActaPreview();
+  });
+}
+function updateActaPreview(){
+  const c=document.getElementById('a-cesfam').value;
+  const u=document.getElementById('a-unidad').value;
+  const rev=document.getElementById('a-revisor').value;
+  if(!c){document.getElementById('a-preview').innerHTML='Selecciona un centro para previsualizar el acta.';return;}
+  const f=byC(c);
+  const t=f.length,tit=f.filter(x=>x.calidad==='TITULARES').length,cont=f.filter(x=>x.calidad==='CONTRATADOS').length;
+  const unidades=ESTRUCTURA[c]?Object.keys(ESTRUCTURA[c]).length:0;
+  const brechas=calcBrechas(c);
+  document.getElementById('a-preview').innerHTML=`
+    <strong>Vista previa del Acta:</strong><br><br>
+    Centro: <strong>${c}</strong>${u?` · Unidad: <strong>${u}</strong>`:''}<br>
+    Total funcionarios: <strong>${t}</strong> (${tit} titulares, ${cont} contratados)<br>
+    Unidades estructurales: <strong>${unidades}</strong> · Brechas detectadas: <strong style="color:${brechas>0?'#c0392b':'#1a7a4a'}">${brechas}</strong><br>
+    ${rev?`Revisor: <strong>${rev}</strong><br>`:''}
+    Fecha: <strong>${document.getElementById('a-fecha').value||'No definida'}</strong>
+  `;
+}
+function calcBrechas(c){
+  if(!ESTRUCTURA[c])return 0;
+  const f=byC(c);
+  return Object.entries(ESTRUCTURA[c]).filter(([u,des])=>
+    des.some(ud=>f.filter(x=>x.unidad2&&x.unidad2.toUpperCase().includes(ud.slice(0,8).toUpperCase())).length===0)
+  ).length;
+}
+
+// ══════════════════════════════════════
+//  PDF
+// ══════════════════════════════════════
+function generarActaPDF(){
+  const c=document.getElementById('a-cesfam').value;
+  if(!c){alert('Selecciona un centro de salud');return;}
+  const u=document.getElementById('a-unidad').value;
+  const rev=document.getElementById('a-revisor').value||'No especificado';
+  const cargo=document.getElementById('a-cargo').value||'';
+  const fecha=document.getElementById('a-fecha').value||new Date().toISOString().slice(0,10);
+  const ref=document.getElementById('a-ref').value||'S/N';
+  const obs=document.getElementById('a-obs').value||'Sin observaciones.';
+  generarPDF(c,u,rev,cargo,fecha,ref,obs);
+}
+function generarActaCesfam(){
+  generarPDF(cesfamActual,'','Sistema DAPOS','Generado Automáticamente',new Date().toISOString().slice(0,10),'AUTO','');
+}
+
+function generarPDF(c,u,rev,cargo,fecha,ref,obs){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const f=byC(c);
+  const filtrados=u&&ESTRUCTURA[c]?f.filter(x=>ESTRUCTURA[c][u]&&ESTRUCTURA[c][u].some(ud=>x.unidad2&&x.unidad2.toUpperCase().includes(ud.slice(0,8).toUpperCase()))):f;
+
+  // Header
+  doc.setFillColor(28,42,58);doc.rect(0,0,210,40,'F');
+  doc.setFillColor(10,124,110);doc.rect(0,35,210,3,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(18);doc.setFont('helvetica','bold');
+  doc.text('DAPOS',14,16);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');
+  doc.text('Dirección de Atención Primaria · Servicio de Salud Metropolitano Central',14,23);
+  doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text('ACTA DE REVISIÓN DE DOTACIÓN',14,32);
+  doc.setTextColor(18,184,158);doc.setFontSize(8);
+  doc.text('Ref: '+ref,160,32);
+
+  // Datos
+  doc.setTextColor(28,42,58);doc.setFontSize(10);doc.setFont('helvetica','bold');
+  doc.text('DATOS DEL ACTA',14,52);
+  doc.setDrawColor(10,124,110);doc.setLineWidth(.4);doc.line(14,54,196,54);
+  const datos=[['Centro de Salud',c],['Unidad revisada',u||'Todas las unidades'],['Fecha revisión',fecha],['Revisor',rev+(cargo?'  ·  '+cargo:'')],['N° Referencia',ref]];
+  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  datos.forEach(([k,v],i)=>{
+    const y=60+i*8;
+    doc.setFont('helvetica','bold');doc.setTextColor(100,115,135);doc.text(k+':',14,y);
+    doc.setFont('helvetica','normal');doc.setTextColor(28,42,58);doc.text(v,65,y);
+  });
+
+  // Resumen
+  const y0=108;
+  doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(28,42,58);
+  doc.text('RESUMEN DOTACIÓN',14,y0);
+  doc.line(14,y0+2,196,y0+2);
+  const tit=filtrados.filter(x=>x.calidad==='TITULARES').length;
+  const cont=filtrados.filter(x=>x.calidad==='CONTRATADOS').length;
+  const sup=filtrados.filter(x=>x.calidad==='SUPLENTE').length;
+  const brechas=calcBrechas(c);
+  const boxes=[[filtrados.length,'Total'],[tit,'Titulares'],[cont,'Contratados'],[sup,'Suplentes'],[brechas,'Brechas']];
+  boxes.forEach(([v,l],i)=>{
+    const x=14+i*37;
+    doc.setFillColor(i===4&&v>0?240:225,i===4&&v>0?232:240,i===4&&v>0?232:238);
+    doc.roundedRect(x,y0+6,34,18,2,2,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(14);
+    doc.setTextColor(i===4&&v>0?192:10,i===4&&v>0?57:124,i===4&&v>0?43:110);
+    doc.text(String(v),x+17,y0+17,{align:'center'});
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(80,95,110);
+    doc.text(l,x+17,y0+22,{align:'center'});
+  });
+
+  // Tabla por unidad
+  const y1=140;
+  doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(28,42,58);
+  doc.text('DOTACIÓN POR UNIDAD',14,y1);
+  doc.line(14,y1+2,196,y1+2);
+  const unidades=ESTRUCTURA[c]||{};
+  const tabRows=Object.entries(unidades).map(([un,des])=>{
+    const n=f.filter(x=>des.some(ud=>x.unidad2&&x.unidad2.toUpperCase().includes(ud.slice(0,8).toUpperCase()))).length;
+    return[un,des.length+'',n+'',n===0?'BRECHA':n<3?'PARCIAL':'OK'];
+  });
+  doc.autoTable({startY:y1+5,head:[['Unidad','Sub-unidades','Personal','Estado']],body:tabRows,
+    headStyles:{fillColor:[28,42,58],textColor:255,fontSize:8,fontStyle:'bold'},
+    bodyStyles:{fontSize:8},alternateRowStyles:{fillColor:[245,248,252]},
+    columnStyles:{3:{fontStyle:'bold'}},
+    didParseCell:(d)=>{if(d.column.index===3&&d.cell.text[0]==='BRECHA')d.cell.styles.textColor=[192,57,43];
+      if(d.column.index===3&&d.cell.text[0]==='PARCIAL')d.cell.styles.textColor=[196,124,10];
+      if(d.column.index===3&&d.cell.text[0]==='OK')d.cell.styles.textColor=[26,122,74];}
+  });
+
+  // Lista funcionarios (máx 80)
+  const yn=doc.lastAutoTable.finalY+12;
+  if(yn<250){
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(28,42,58);
+    doc.text('NÓMINA DE FUNCIONARIOS'+(u?'  ·  '+u:''),14,yn);
+    doc.line(14,yn+2,196,yn+2);
+    const rows=filtrados.slice(0,80).map(x=>[x.rut_completo,x.nombre.slice(0,30),x.cargo.slice(0,20),x.unidad2.slice(0,20)||'-',x.horas,x.calidad.slice(0,12)]);
+    doc.autoTable({startY:yn+5,head:[['RUT','Nombre','Cargo','Unidad Desempeño','Hrs','Calidad']],body:rows,
+      headStyles:{fillColor:[10,124,110],textColor:255,fontSize:7,fontStyle:'bold'},
+      bodyStyles:{fontSize:7},alternateRowStyles:{fillColor:[245,248,252]}});
+  }
+
+  // Observaciones
+  const yobs=Math.min(doc.lastAutoTable?doc.lastAutoTable.finalY+10:yn+10,265);
+  doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(28,42,58);
+  doc.text('OBSERVACIONES:',14,yobs);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(60,75,90);
+  doc.text(obs,14,yobs+6,{maxWidth:182});
+
+  // Footer
+  const pg=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pg;i++){
+    doc.setPage(i);
+    doc.setFillColor(28,42,58);doc.rect(0,287,210,10,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont('helvetica','normal');
+    doc.text('DAPOS · DAP Central · Sistema de Revisión de Dotación · Generado: '+new Date().toLocaleString('es-CL'),14,293);
+    doc.text('Pág. '+i+' / '+pg,196,293,{align:'right'});
+  }
+  doc.save('Acta_Dotacion_'+c.replace(/ /g,'_')+'_'+fecha+'.pdf');
+}
+
+function exportarDotPDF(){
+  const c=document.getElementById('d-cesfam').value;
+  const cal=document.getElementById('d-calidad').value;
+  const q=(document.getElementById('d-search').value||'').toLowerCase();
+  let f=FUNC;
+  if(c)f=f.filter(x=>x.cesfam===c);
+  if(cal)f=f.filter(x=>x.calidad===cal);
+  if(q)f=f.filter(x=>x.nombre.toLowerCase().includes(q)||x.rut_completo.includes(q));
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  doc.setFillColor(28,42,58);doc.rect(0,0,297,18,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(12);
+  doc.text('DAPOS · Nómina de Dotación · '+(c||'Todos los centros'),10,11);
+  doc.autoTable({startY:22,head:[['RUT','Nombre','Cargo','CESFAM','Unidad','Horas','Calidad','Inicio']],
+    body:f.slice(0,500).map(x=>[x.rut_completo,x.nombre,x.cargo,x.cesfam,x.unidad2||'-',x.horas,x.calidad,x.inicio||'-']),
+    headStyles:{fillColor:[10,124,110],textColor:255,fontSize:8},bodyStyles:{fontSize:7},alternateRowStyles:{fillColor:[245,248,252]}
+  });
+  doc.save('Nomina_Dotacion_'+(c||'DAP')+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+}
+</script>
+</body>
+</html>
