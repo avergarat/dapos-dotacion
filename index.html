@@ -166,6 +166,14 @@ tr:hover td{background:#fafbfd}
 .bar-f.am{background:var(--amber)}.bar-f.re{background:var(--red)}
 .bar-n{width:28px;text-align:right;font-weight:600;color:var(--ink)}
 
+/* ─── HORAS CLÍNICAS ─── */
+.hc-bar{display:flex;align-items:center;gap:8px;font-size:.78rem}
+.hc-track{flex:1;height:7px;background:#eef0f5;border-radius:99px;overflow:hidden;min-width:70px}
+.hc-fill{height:100%;border-radius:99px;transition:width .6s}
+.hc-ok .hc-fill{background:#1a7a4a}.hc-warn .hc-fill{background:#c47c0a}.hc-crit .hc-fill{background:#c0392b}
+.hrs-summary{display:flex;gap:20px;padding:12px 20px;background:var(--mist);border-bottom:1px solid var(--border);font-size:.8rem;flex-wrap:wrap;align-items:center}
+.hrs-summary span{white-space:nowrap}
+
 @media(max-width:960px){
   .sidebar{width:56px}.sbrand .sname,.sbrand .sdept,.si span,.sfoot .suname,.sfoot .surole,.slgout{display:none}
   .main{margin-left:56px}
@@ -278,12 +286,22 @@ tr:hover td{background:#fafbfd}
               <select id="br-cesfam" onchange="renderBrechas()">
                 <option value="">Todos los centros</option>
               </select>
+              <div class="tab-bar" style="margin:0">
+                <div class="tab on" id="br-tab-pers" onclick="switchBrechaView('personas')">Por Personas</div>
+                <div class="tab" id="br-tab-hrs" onclick="switchBrechaView('horas')">Por Horas Clínicas</div>
+              </div>
             </div>
           </div>
-          <div style="overflow-x:auto">
+          <div id="br-view-personas" style="overflow-x:auto">
             <table class="brecha-table">
               <thead><tr><th>Centro</th><th>Unidad</th><th>Unidades de Desempeño definidas</th><th>Personal asignado</th><th>Estado</th></tr></thead>
               <tbody id="tb-brechas"></tbody>
+            </table>
+          </div>
+          <div id="br-view-horas" style="display:none;overflow-x:auto">
+            <table class="brecha-table">
+              <thead><tr><th>Centro</th><th>Unidad</th><th>Personas</th><th>Hrs Contrato</th><th>Encomendaciones</th><th>Hrs Clínicas</th><th>Disponibilidad</th></tr></thead>
+              <tbody id="tb-brechas-hrs"></tbody>
             </table>
           </div>
           <div class="tfoot" id="br-count"></div>
@@ -307,7 +325,7 @@ tr:hover td{background:#fafbfd}
           </div>
           <div style="overflow-x:auto">
             <table>
-              <thead><tr><th>RUT</th><th>Nombre</th><th>Cargo</th><th>CESFAM</th><th>Unidad</th><th>Horas</th><th>Calidad</th><th>Inicio</th></tr></thead>
+              <thead><tr><th>RUT</th><th>Nombre</th><th>Cargo</th><th>CESFAM</th><th>Unidad</th><th>Hrs Contrato</th><th>Hrs Clínicas</th><th>Calidad</th><th>Inicio</th></tr></thead>
               <tbody id="tb-dot"></tbody>
             </table>
           </div>
@@ -348,25 +366,36 @@ tr:hover td{background:#fafbfd}
 //  DATOS EMBEBIDOS
 // ══════════════════════════════════════
 const ESTRUCTURA = {"CESFAM N. VOULLIEME":{"APOYO CLINICO":["ATENCION DOMICILIARIA","TOMA DE MUESTRAS","VACUNATORIO"],"FARMACIA":["ATENCION FARMACEUTICA","VENTANA"],"TRANSVERSAL":["ESPACIOS AMIGABLES","AT. DOMICILIARIA","SIGGES","ESTADISTICA","CIRUGIA MENOR","SALA REHABILITACION","VIDA SANA","AUXILIAR","BODEGA DE ALIMENTOS","SALA ERA","MAMAV","SALA IRA","COMISIÓN DE ESTUDIOS","CONDUCTOR","DUPLA ACOMPAÑAMIENTO","MEJOR NIÑEZ"],"SECTOR CELESTE":["DENTAL","SOME"],"DIRECCION":["SUBDIRECCION TECNICA","DIRECTOR/A","SUBDIRECCION DE GESTION ADMINISTRATIVA"],"SECTOR AMARILLO":["DENTAL","SOME"],"SOME CENTRAL":[],"SECTOR VERDE":["DENTAL","SOME"]},"CESFAM AHUES":{"APOYO CLINICO":["APOYO CLINICO"],"DIRECCION":["SUBDIRECCION TECNICA","SUBDIRECCION DE GESTION ADMINISTRATIVA","DIRECCION","DIRECTOR/A"],"SOME CENTRAL":["SOME CENTRAL"],"TRANSVERSAL":["SALA IRA","SALA REHABILITACION","AT. DOMICILIARIA","VIDA SANA","TRANSVERSAL","SALA ESTIMULACION TRANSVERSAL","SALA ERA","MEJOR NIÑEZ","APOYO CLINICO-VACUNATORIO","BODEGA DE ALIMENTOS (LECHE)","MAMAV","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","DUPLA ACOMPAÑAMIENTO","ESPACIOS AMIGABLES","ESTADISTICA","SIGGES","AUXILIAR"],"SECTOR BLANCO":["DENTAL BLANCO","SOME"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"SECTOR VERDE":["DENTAL VERDE","SOME"],"FARMACIA":["FARMACIA"],"CECOSF":["CECOSF"]},"CESFAM MAIPU":{"SECTOR BLANCO":["DENTAL BLANCO","SOME"],"SOME CENTRAL":["SOME CENTRAL"],"TRANSVERSAL":["SALA ESTIMULACION TRANSVERSAL","SALA ERA","APOYO CLINICO-VACUNATORIO","SALA AIDIA","COMISION","OIRS","BODEGA DE ALIMENTOS (LECHE)","SALA IRA","MAMAV","TRANSVERSAL","SALA REHABILITACION","ECICEP","AT. DOMICILIARIA","BODEGA DE ALIMENTOS (LECHE)-SECTOR BLANCO (31.5 HRS)","DENTAL-ORTODONCISTA TRANSVERSAL","DUPLA ACOMPAÑAMIENTO","MEJOR NIÑEZ","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","SIGGES","VIDA SANA","AUXILIAR"],"APOYO CLINICO":["APOYO CLINICO"],"DIRECCION":["SUBDIRECCION DE GESTION ADMINISTRATIVA","SUBDIRECCION TECNICA","DIRECCION","DIRECTOR/A"],"SECTOR CELESTE":["DENTAL CELESTE","SOME"],"FARMACIA":["FARMACIA"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"SECTOR VERDE":["DENTAL VERDE","SOME"]},"CESFAM A.M. JURICIC":{"TRANSVERSAL":["SALA IRA","SALA ESTIMULACION TRANSVERSAL","TRANSVERSAL","AT. DOMICILIARIA","SALA ERA","MAMAV","BODEGA DE ALIMENTOS (LECHE)","APOYO CLINICO-VACUNATORIO","ECICEP","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","DUPLA ACOMPAÑAMIENTO","ESPACIOS AMIGABLES","ESTADISTICA","MEJOR NIÑEZ","SALA REHABILITACION","SIGGES","VIDA SANA","AUXILIAR"],"SECTOR CELESTE":["DENTAL","SOME"],"APOYO CLINICO":["APOYO CLINICO"],"DIRECCION":["SUBDIRECCION DE GESTION ADMINISTRATIVA","DIRECCION","SUBDIRECCION TECNICA","SECRETARIA DIRECCIÓN","DIRECTOR/A"],"SECTOR VERDE":["DENTAL","SOME"],"FARMACIA":["FARMACIA"],"SOME CENTRAL":["SOME CENTRAL"],"SECTOR AMARILLO":["DENTAL","SOME"],"SAPU":["SAPU (3° TURNO)"]},"CESFAM CHUCHUNCO":{"TRANSVERSAL":["SALA ESTIMULACION TRANSVERSAL","AT. DOMICILIARIA","BODEGA DE ALIMENTOS (LECHE)","APOYO CLINICO-VACUNATORIO","TRANSVERSAL","MAMAV","COMISION","SALA ERA","DUPLA ACOMPAÑAMIENTO","SALA IRA","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","MEJOR NIÑEZ","SALA REHABILITACION","SIGGES","VIDA SANA","AUXILIAR"],"APOYO CLINICO":["APOYO CLINICO"],"DIRECCION":["SUBDIRECCION DE GESTION ADMINISTRATIVA","SUBDIRECCION TECNICA","DIRECCION","DIRECTOR/A"],"CECOSF":["CECOSF","CECOSF-CESFAM AMARILLO","DENTAL","FARMACIA"],"SAPU":["SAPU (3° TURNO)"],"FARMACIA":["FARMACIA"],"SECTOR VERDE":["DENTAL","SOME"],"SECTOR AMARILLO":["DENTAL","SOME"],"SECTOR AZUL":["DENTAL","SOME"],"SOME CENTRAL":["SOME CENTRAL"]},"CESFAM LAS MERCEDES":{"DIRECCION":["SUBDIRECCION TECNICA","DIRECCION","SUBDIRECCION DE GESTION ADMINISTRATIVA","SECRETARIA DIRECCIÓN","DIRECTOR/A"],"FARMACIA":["FARMACIA"],"SECTOR AZUL":["DENTAL AZUL","SOME"],"TRANSVERSAL":["SALA ESTIMULACION TRANSVERSAL","MEJOR NIÑEZ","SALA IRA","COMISION","SALA REHABILITACION","APOYO CLINICO-VACUNATORIO","TRANSVERSAL","SALA ERA","BODEGA DE ALIMENTOS (LECHE)","DENTAL AZUL RAYOS","AT. DOMICILIARIA","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","DUPLA ACOMPAÑAMIENTO","ESPACIOS AMIGABLES","ESTADISTICA","MAMAV","SIGGES","VIDA SANA","AUXILIAR"],"APOYO CLINICO":["APOYO CLINICO"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"SECTOR VERDE":["DENTAL VERDE","SOME"],"SOME CENTRAL":["SOME CENTRAL"]},"CESFAM N°1":{"SECTOR VERDE":["DENTAL VERDE","SOME"],"TRANSVERSAL":["APOYO CLINICO-VACUNATORIO","SALA REHABILITACION","MEJOR NIÑEZ","VIDA SANA","OIRS","SALA ERA","BODEGA DE ALIMENTOS (LECHE)","MAMAV","SALA ESTIMULACION TRANSVERSAL","DENTAL","TRANSVERSAL","DUPLA ACOMPAÑAMIENTO","SALA IRA","AT. DOMICILIARIA","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","SIGGES","AUXILIAR"],"DIRECCION":["SUBDIRECCION TECNICA","SUBDIRECCION DE GESTION ADMINISTRATIVA","DIRECCION","DIRECTOR/A"],"FARMACIA":["FARMACIA"],"APOYO CLINICO":["APOYO CLINICO"],"SECTOR AZUL":["DENTAL AZUL","SOME"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"SOME CENTRAL":["SOME CENTRAL"],"SAPU":["SAPU (3° TURNO)"]},"CESFAM PADRE VICENTE IRARRAZAVAL":{"FARMACIA":["FARMACIA"],"APOYO CLINICO":["APOYO CLINICO"],"TRANSVERSAL":["TRANSVERSAL","SALA ESTIMULACION TRANSVERSAL","ECOGRAFISTA","AT. DOMICILIARIA","BODEGA DE ALIMENTOS (LECHE)","SALA ERA","DUPLA ACOMPAÑAMIENTO","APOYO CLINICO-VACUNATORIO","MAMAV","SALA REHABILITACION","OIRS","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","MEJOR NIÑEZ","SALA IRA","SIGGES","VIDA SANA","AUXILIAR"],"DIRECCION":["DIRECCION","SUBDIRECCION DE GESTION ADMINISTRATIVA","SUBDIRECCION TECNICA","DIRECTOR/A"],"SOME CENTRAL":["SOME CENTRAL"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"SECTOR AZUL":["DENTAL AZUL","SOME"],"SECTOR VERDE":["DENTAL VERDE","SOME"]},"CESFAM SOFIA PINCHEIRA":{"APOYO CLINICO":["APOYO CLINICO"],"DIRECCION":["SUBDIRECCION DE GESTION ADMINISTRATIVA","SUBDIRECCION TECNICA","SUBDIRECCION GESTION ADMINISTRATIVA","DIRECCION","DIRECTOR/A"],"TRANSVERSAL":["COMISION","ECICEP","MAMAV","DUPLA ACOMPAÑAMIENTO","SAR","VIDA SANA","TRANSVERSAL","APOYO CLINICO-VACUNATORIO","BODEGA DE ALIMENTOS (LECHE)","SALA ESTIMULACION TRANSVERSAL","AT. DOMICILIARIA","MEJOR NIÑEZ","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","SALA ERA","SALA IRA","SALA REHABILITACION","SIGGES","AUXILIAR"],"SECTOR AMARILLO":["DENTAL AMARILLO","SOME"],"FARMACIA":["FARMACIA"],"SECTOR BLANCO":["DENTAL BLANCO","SOME"],"SECTOR VERDE":["DENTAL VERDE","SOME"],"SOME CENTRAL":["SOME CENTRAL"]},"CESFAM N°5":{"DIRECCION":["SUBDIRECCION TECNICA","SUBDIRECCION DE GESTION ADMINISTRATIVA","DIRECCION","DIRECTOR/A"],"TRANSVERSAL":["APOYO CLINICO-VACUNATORIO","DUPLA ACOMPAÑAMIENTO","TRANSVERSAL- SECTOR ROJO","SALA ERA","SALA IRA","TRANSVERSAL","SALA REHABILITACION","VIDA SANA","ESTA EN DAP","MAMAV","SALA ESTIMULACION TRANSVERSAL","MEJOR NIÑEZ","BODEGA DE ALIMENTOS (LECHE)","AT. DOMICILIARIA","CIRUGIA MENOR","COMISIÓN DE ESTUDIOS","CONDUCTOR","ESPACIOS AMIGABLES","ESTADISTICA","SIGGES","AUXILIAR"],"FARMACIA":["FARMACIA"],"SECTOR LILA":["DENTAL LILA","SOME"],"APOYO CLINICO":["APOYO CLINICO"],"SECTOR VERDE":["DENTAL VERDE","SOME"],"SECTOR BLANCO":["DENTAL BLANCO","SOME"],"SECTOR ROJO":["DENTAL ROJO","SOME"],"SOME CENTRAL":["SOME CENTRAL"]},"DAP CENTRAL":{"DIRECCION":["DIRECCION","SUBDIRECCION DE GESTION ADMINISTRATIVA"],"TRANSVERSAL":["TRANSVERSAL","COMISION"],"APOYO CLINICO":["APOYO CLINICO"]}};
-const API_URL = 'https://script.google.com/macros/s/AKfycbzIDUWqPiFeViNcLIT36ruUZ-kvgRIv-vsJSP0pyZyeuvpmT9hHCses8h5SCNzgWwlV7w/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxRiuoPcDBJAjc23zFpLE64534qTnPkEEaWBiSw6Q569Xh1bth4Noyd8u0LkUDP4t4RsQ/exec';
 let FUNC = [];
 
 async function cargarDatos() {
   try {
-    const res = await fetch(API_URL + '?action=getAll');
-    const data = await res.json();
-    FUNC = data.map(f => ({
-      rut_completo: (f['Rut']||'').toString().trim() + '-' + (f['Dv']||'').toString().trim(),
-      nombre: (f['Nombre Funcionario']||'').toString().trim(),
-      planta: (f['Descripción Planta']||'').toString().trim(),
-      calidad: (f['Descripción Calidad Jurídica']||'').toString().trim(),
-      horas: (f['Número horas']||'').toString().trim(),
-      cesfam: (f['Descripción Unidad']||'').toString().trim(),
-      unidad2: (f['Descripción Unidad 2']||'').toString().trim(),
-      cargo: (f['Descripción Cargo']||'').toString().trim(),
-      inicio: (f['Fecha Inicio Contrato']||'').toString().slice(0,10),
-      genero: (f['Género']||'').toString().trim()
-    }));
+    const [resAll, resHrs] = await Promise.all([
+      fetch(API_URL + '?action=getAll'),
+      fetch(API_URL + '?action=getHorasClinicas').catch(()=>({json:()=>({})}))
+    ]);
+    const [data, horasMap] = await Promise.all([resAll.json(), resHrs.json ? resHrs.json() : resHrs]);
+    FUNC = data.map(f => {
+      const rut = (f['Rut']||'').toString().trim().replace(/\./g,'');
+      const h = horasMap[rut] || {};
+      const hk = parseFloat(h.hk || f['Número horas'] || 44);
+      return {
+        rut_completo: rut + '-' + (f['Dv']||'').toString().trim(),
+        nombre: (f['Nombre Funcionario']||'').toString().trim(),
+        planta: (f['Descripción Planta']||'').toString().trim(),
+        calidad: (f['Descripción Calidad Jurídica']||'').toString().trim(),
+        horas: hk,
+        horas_clinicas: parseFloat(h.hc !== undefined ? h.hc : hk),
+        descuento: parseFloat(h.dc || 0),
+        encomendaciones: (h.en || ''),
+        cesfam: (f['Descripción Unidad']||'').toString().trim(),
+        unidad2: (f['Descripción Unidad 2']||'').toString().trim(),
+        cargo: (f['Descripción Cargo']||'').toString().trim(),
+        inicio: (f['Fecha Inicio Contrato']||'').toString().slice(0,10),
+        genero: (f['Género']||'').toString().trim()
+      };
+    });
     initApp();
   } catch(e) {
     document.getElementById('lerr').textContent = '⚠ Error al cargar datos. Verifica la URL del Apps Script.';
@@ -435,6 +464,57 @@ function calBadge(c){
   if(c==='CONTRATADOS')return '<span class="badge ba">CONTRATADO</span>';
   if(c==='SUPLENTE')return '<span class="badge br">SUPLENTE</span>';
   return '<span class="badge">'+c+'</span>';
+}
+
+function hcBadge(f){
+  const hc=parseFloat(f.horas_clinicas)||parseFloat(f.horas)||0;
+  const hk=parseFloat(f.horas)||44;
+  if(!f.descuento||f.descuento===0) return `<span class="badge bg">${hc}</span>`;
+  const pct=hk>0?Math.round(hc/hk*100):100;
+  const cls=pct>=80?'bg':pct>=50?'ba':'br';
+  const tip=(f.encomendaciones||'').replace(/"/g,"'");
+  return `<span class="badge ${cls}" title="${tip}">${hc} <small>(${pct}%)</small></span>`;
+}
+
+function switchBrechaView(view){
+  document.getElementById('br-view-personas').style.display=view==='personas'?'block':'none';
+  document.getElementById('br-view-horas').style.display=view==='horas'?'block':'none';
+  document.getElementById('br-tab-pers').classList.toggle('on',view==='personas');
+  document.getElementById('br-tab-hrs').classList.toggle('on',view==='horas');
+  if(view==='horas') renderBrechasHoras();
+}
+
+function renderBrechasHoras(){
+  const filtro=document.getElementById('br-cesfam').value;
+  const tb=document.getElementById('tb-brechas-hrs'); tb.innerHTML='';
+  const centros=filtro?[filtro]:CENTROS;
+  let rows=[];
+  centros.forEach(c=>{
+    const f=byC(c);
+    const unidades=ESTRUCTURA[c]||{};
+    Object.entries(unidades).forEach(([u,des])=>{
+      const personal=f.filter(x=>des.some(ud=>x.unidad2&&x.unidad2.toUpperCase().includes(ud.slice(0,8).toUpperCase())));
+      const totalHk=personal.reduce((s,x)=>s+(parseFloat(x.horas)||0),0);
+      const totalHc=personal.reduce((s,x)=>s+(parseFloat(x.horas_clinicas)||parseFloat(x.horas)||0),0);
+      const totalDc=personal.reduce((s,x)=>s+(parseFloat(x.descuento)||0),0);
+      const pct=totalHk>0?Math.round(totalHc/totalHk*100):100;
+      const cls=pct>=80?'ok':pct>=50?'warn':'err';
+      const badgeCls=pct>=80?'bg':pct>=50?'ba':'br';
+      rows.push({c,u,n:personal.length,hk:totalHk,dc:totalDc,hc:totalHc,pct,cls,badgeCls});
+    });
+  });
+  rows.sort((a,b)=>a.pct-b.pct);
+  rows.forEach(r=>{
+    tb.innerHTML+=`<tr>
+      <td><strong>${r.c}</strong></td><td>${r.u}</td><td>${r.n}</td>
+      <td>${r.hk.toFixed(1)}</td>
+      <td><span style="color:var(--red)">-${r.dc.toFixed(1)}</span></td>
+      <td><strong>${r.hc.toFixed(1)}</strong></td>
+      <td><div class="brecha-bar ${r.cls}"><div class="bbar-track"><div class="bbar-fill" style="width:${r.pct}%"></div></div><span class="badge ${r.badgeCls}">${r.pct}%</span></div></td>
+    </tr>`;
+  });
+  const avg=rows.length?Math.round(rows.reduce((s,r)=>s+r.pct,0)/rows.length):0;
+  document.getElementById('br-count').textContent=`${rows.length} unidades · Disponibilidad clínica promedio: ${avg}%`;
 }
 
 // ══════════════════════════════════════
@@ -545,8 +625,12 @@ function renderTabContent(u,c){
     Object.entries(unidadesEstr).forEach(([unidad,desempleos])=>{
       const fn=f.filter(x=>matchUnidad(x,unidad,desempleos));
       const bClass=fn.length===0?'brecha-err':fn.length<3?'brecha-warn':'brecha-ok';
+      const hcU=fn.reduce((s,x)=>s+(parseFloat(x.horas_clinicas)||parseFloat(x.horas)||0),0);
+      const hkU=fn.reduce((s,x)=>s+(parseFloat(x.horas)||0),0);
+      const pctU=hkU>0?Math.round(hcU/hkU*100):100;
+      const colU=pctU>=80?'#12b89e':pctU>=50?'#c47c0a':'#ff6b6b';
       html+=`<div class="u-card">
-        <div class="u-head"><div class="u-name">${unidad}</div><span class="u-count">${fn.length} pers.</span></div>
+        <div class="u-head"><div class="u-name">${unidad}</div><div style="text-align:right"><span class="u-count">${fn.length} pers.</span>${hkU>0?`<div style="font-size:.62rem;color:${colU};margin-top:2px">${hcU.toFixed(0)} hrs clín.</div>`:''}</div></div>
         <div class="u-body">`;
       desempleos.forEach(ud=>{
         const n=f.filter(x=>x.unidad2&&x.unidad2.toUpperCase().includes(ud.slice(0,8).toUpperCase())).length;
@@ -564,13 +648,24 @@ function renderTabContent(u,c){
     if(desempleos.length){
       filtrados=f.filter(x=>desempleos.some(ud=>x.unidad2&&x.unidad2.toUpperCase().includes(ud.slice(0,8).toUpperCase())));
     }
+    const totalHk=filtrados.reduce((s,x)=>s+(parseFloat(x.horas)||0),0);
+    const totalHc=filtrados.reduce((s,x)=>s+(parseFloat(x.horas_clinicas)||parseFloat(x.horas)||0),0);
+    const totalDc=filtrados.reduce((s,x)=>s+(parseFloat(x.descuento)||0),0);
+    const pctDisp=totalHk>0?Math.round(totalHc/totalHk*100):100;
+    const hrsSummary=totalHk>0?`<div class="hrs-summary">
+      <span><span style="color:#8896aa">Hrs contrato:</span> <strong>${totalHk.toFixed(1)}</strong></span>
+      <span><span style="color:var(--red)">Encomendaciones:</span> <strong>-${totalDc.toFixed(1)}</strong></span>
+      <span><span style="color:var(--teal)">Hrs clínicas:</span> <strong>${totalHc.toFixed(1)}</strong></span>
+      <span class="badge ${pctDisp>=80?'bg':pctDisp>=50?'ba':'br'}">${pctDisp}% disponibilidad</span>
+    </div>`:'';
     let html=`<div class="card">
       <div class="ch"><div class="chtitle">Unidad: ${u} — ${filtrados.length} funcionarios</div></div>
+      ${hrsSummary}
       <div style="overflow-x:auto"><table>
-        <thead><tr><th>RUT</th><th>Nombre</th><th>Cargo</th><th>Unidad de Desempeño</th><th>Horas</th><th>Calidad</th></tr></thead><tbody>`;
+        <thead><tr><th>RUT</th><th>Nombre</th><th>Cargo</th><th>Unidad de Desempeño</th><th>Hrs Contrato</th><th>Hrs Clínicas</th><th>Calidad</th></tr></thead><tbody>`;
     if(!filtrados.length) html+='<tr><td colspan="6" style="text-align:center;padding:30px;color:#8896aa">No hay funcionarios asignados a esta unidad</td></tr>';
     filtrados.forEach(x=>{
-      html+=`<tr><td>${x.rut_completo}</td><td>${x.nombre}</td><td>${x.cargo}</td><td>${x.unidad2||'-'}</td><td>${x.horas}</td><td>${calBadge(x.calidad)}</td></tr>`;
+      html+=`<tr><td>${x.rut_completo}</td><td>${x.nombre}</td><td>${x.cargo}</td><td>${x.unidad2||'-'}</td><td>${x.horas}</td><td>${hcBadge(x)}</td><td>${calBadge(x.calidad)}</td></tr>`;
     });
     html+='</tbody></table></div></div>';
     tc.innerHTML=html;
@@ -633,7 +728,7 @@ function renderDot(){
   if(q)f=f.filter(x=>x.nombre.toLowerCase().includes(q)||x.rut_completo.includes(q));
   const tb=document.getElementById('tb-dot'); tb.innerHTML='';
   f.slice(0,300).forEach(x=>{
-    tb.innerHTML+=`<tr><td>${x.rut_completo}</td><td>${x.nombre}</td><td>${x.cargo}</td><td>${x.cesfam}</td><td>${x.unidad2||'-'}</td><td>${x.horas}</td><td>${calBadge(x.calidad)}</td><td>${x.inicio||'-'}</td></tr>`;
+    tb.innerHTML+=`<tr><td>${x.rut_completo}</td><td>${x.nombre}</td><td>${x.cargo}</td><td>${x.cesfam}</td><td>${x.unidad2||'-'}</td><td>${x.horas}</td><td>${hcBadge(x)}</td><td>${calBadge(x.calidad)}</td><td>${x.inicio||'-'}</td></tr>`;
   });
   document.getElementById('d-count').textContent=`Mostrando ${Math.min(f.length,300)} de ${f.length} registros`;
 }
