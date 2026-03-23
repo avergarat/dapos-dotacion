@@ -535,14 +535,39 @@ async function cargarDatos() {
     LISTAS = (listas && typeof listas === 'object') ? listas : { cargos:[], unidades:[], indGeneral:{} };
     if (!LISTAS.cargos) LISTAS.cargos = [];
     if (!LISTAS.unidades) LISTAS.unidades = [];
-    if (!LISTAS.indGeneral) LISTAS.indGeneral = {};
+    if (!LISTAS.indGeneral || Object.keys(LISTAS.indGeneral).length === 0) {
+      // Fallback con datos de IND GENERAL cuando el Apps Script no los entrega
+      LISTAS.indGeneral = {
+        "Delegados gremiales":0,"Asociados gremiales":0,"Dirigente Gremial":44,
+        "Días administrativos Ley médica":2.13,"Días Capacitación Extra Ley Médica":1.06,
+        "Vacaciones extra 5 días":0.89,"Vacaciones extras 10 días":1.77,
+        "Fuero Lactancia":5,"Asamblea General":0.5,"Reunión de Autocuidado":0.5,
+        "Programación":0.53,"Reuniones de Sector con análisis de casos":1,
+        "Estudios de caso":0.82,"Dia administrativos Ley N° 18834":1.06,
+        "Reunión de Programa":0.5,"Censo mensual":2.13,"Censo semestral":1.06,
+        "Consejo Técnico":0.75,"Equipo Gestor":2,"Reunión de Estamento":0.13,
+        "Comité paritario":0.25,"Comité capacitacion":0.5,"Comité OIRS":0.5,
+        "Comité de Lactancia Materna":0.5,"Comité de Calidad":0.5,
+        "Comité de farmacia":0.38,"Comité de género":0.5,"Comité de Cultura Local":0.5,
+        "Comité de Seguridad":0.25,"Comité de Riesgos Psicosociales":0.5,
+        "Mesa de Género y LGTBQ+Funcionarios":0.25,"Contraloría Médica":5,
+        "Odontólogo Contralor":2.5,"Matron/a Contralor":2.5,
+        "Coordinador Programa Odontológico":11,
+        "Coordinador Programa Infantil, Adolescente y Ch CC":11,
+        "Coordinador Programa Infantil, Adolescente y Ch CC (Espacio Amigable)":13,
+        "Encargado Programa Salud Mental":11,
+        "Encargado Programa Salud sexual y reproductiva":9,
+        "Encargada Programa Salud sexual y reproductiva (incluye VIH)":11,
+        "Jefe de Sector":22,"Coordinador CECOSF":22
+      };
+    }
     setStep(`${data.length} funcionarios cargados`);
     FUNC = data.map(f => {
       const rut = (f['Rut']||'').toString().trim().replace(/\./g,'');
       const h = HORAS_MAP[rut] || {};
       const hk = parseFloat(h.hk || f['Número horas'] || 44);
       return {
-        rut_completo: rut + '-' + (f['Dv']||'').toString().trim(),
+        rut_completo: rut + '-' + (f['Dv'] != null ? f['Dv'] : '').toString().trim(),
         nombre: (f['Nombre Funcionario']||'').toString().trim(),
         planta: (f['Descripción Planta']||'').toString().trim(),
         calidad: (f['Descripción Calidad Jurídica']||'').toString().trim(),
