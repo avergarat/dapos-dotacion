@@ -607,12 +607,11 @@ async function cargarDatos() {
   };
   try {
     setStep('Obteniendo dotación base…');
-    const [data, horasMap, listas, revisionMap, unidadesMap] = await Promise.all([
+    const [data, horasMap, listas, revisionMap] = await Promise.all([
       safeJson(API_URL + '?action=getAll'),
       safeJson(API_URL + '?action=getHorasClinicas'),
       safeJson(API_URL + '?action=getLists'),
-      safeJson(API_URL + '?action=getRevision'),
-      safeJson(API_URL + '?action=getUnidades')
+      safeJson(API_URL + '?action=getRevision')
     ]);
     if (!Array.isArray(data) || data.length === 0)
       throw new Error('No se pudo obtener la dotación base (respuesta vacía o inválida)');
@@ -620,24 +619,22 @@ async function cargarDatos() {
     HORAS_MAP = (horasMap && typeof horasMap === 'object' && !Array.isArray(horasMap)) ? horasMap : {};
     LISTAS = (listas && typeof listas === 'object') ? listas : { cargos:[], unidades:[], indGeneral:{} };
     REVISION_MAP = (revisionMap && typeof revisionMap === 'object' && !Array.isArray(revisionMap)) ? revisionMap : {};
-    // Cargar unidades desde la hoja "UNIDADES CESFAM" del servidor
-    // Validar que sea un objeto real con CESFAM como claves:
-    // - sin propiedades de respuesta API ('ok', 'msg', 'error')
-    // - todos los valores deben ser objetos anidados (no primitivos ni arrays)
-    const esEstructuraValida = unidadesMap &&
-      typeof unidadesMap === 'object' &&
-      !Array.isArray(unidadesMap) &&
-      !('ok' in unidadesMap) &&
-      !('msg' in unidadesMap) &&
-      !('error' in unidadesMap) &&
-      Object.keys(unidadesMap).length > 0 &&
-      Object.values(unidadesMap).every(v => v && typeof v === 'object' && !Array.isArray(v));
-    if (esEstructuraValida) {
-      ESTRUCTURA = unidadesMap;
-      CENTROS = Object.keys(ESTRUCTURA).sort();
-      console.log('Unidades cargadas desde servidor:', CENTROS.length, 'centros');
+    // Construir ESTRUCTURA desde LISTAS.unidades (hoja "UNIDADES CESFAM" vía getLists)
+    if (Array.isArray(LISTAS.unidades) && LISTAS.unidades.length > 0) {
+      const est = {};
+      LISTAS.unidades.forEach(({cesfam, unidad, unidadDes}) => {
+        if (!cesfam || !unidad) return;
+        if (!est[cesfam]) est[cesfam] = {};
+        if (!est[cesfam][unidad]) est[cesfam][unidad] = [];
+        if (unidadDes && !est[cesfam][unidad].includes(unidadDes)) est[cesfam][unidad].push(unidadDes);
+      });
+      if (Object.keys(est).length > 0) {
+        ESTRUCTURA = est;
+        CENTROS = Object.keys(ESTRUCTURA).sort();
+        console.log('Unidades cargadas desde hoja UNIDADES CESFAM:', CENTROS.length, 'centros');
+      }
     } else {
-      console.warn('getUnidades no disponible o inválido — usando estructura local embebida');
+      console.warn('LISTAS.unidades vacío — usando estructura local embebida');
     }
     if (!LISTAS.cargos) LISTAS.cargos = [];
     if (!LISTAS.unidades) LISTAS.unidades = [];
