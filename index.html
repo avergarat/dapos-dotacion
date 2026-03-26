@@ -201,6 +201,12 @@ tr:hover td{background:#fafbfd}
 .asig-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .asig-grid .fg{min-width:0}
 .asig-grid .fg select{width:100%;min-width:0;max-width:100%}
+.asig-combo{position:relative;width:100%}
+.asig-combo .asig-search{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:'DM Sans',sans-serif;font-size:.85rem;color:var(--ink);box-sizing:border-box;background:#fff}
+.asig-combo .asig-search:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,124,110,.1)}
+.asig-dd{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:200px;overflow-y:auto;z-index:9999}
+.asig-opt{padding:8px 12px;font-size:.82rem;color:var(--ink);cursor:pointer}
+.asig-opt:hover,.asig-opt.asig-sel{background:var(--mist);color:var(--teal);font-weight:600}
 .calc-box{background:var(--mist);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:.9rem;font-weight:700;color:var(--ink)}
 .encom-preview{background:var(--teal3);border-left:3px solid var(--teal);border-radius:0 7px 7px 0;padding:10px 14px;font-size:.77rem;color:var(--ink2);margin-top:8px;min-height:32px;word-break:break-word}
 
@@ -1446,25 +1452,64 @@ function chequearReasign(){
   }
 }
 
+function asigLabel(val){
+  if(!val) return '';
+  const h=LISTAS.indGeneral[val];
+  return h!==undefined?`${val} (${+parseFloat(h).toFixed(2)}h)`:val;
+}
 function fillAsignaciones(currentAsigs){
   const container=document.getElementById('asig-container');
   container.innerHTML='';
-  const acts=Object.keys(LISTAS.indGeneral||{}).sort();
   for(let i=0;i<10;i++){
     const cur=currentAsigs[i]||'';
-    let opts='<option value="">— Sin asignación —</option>';
-    acts.forEach(a=>{
-      const h=LISTAS.indGeneral[a];
-      opts+=`<option value="${a}"${a===cur?' selected':''}>${a} (${+parseFloat(h).toFixed(2)}h)</option>`;
-    });
-    container.innerHTML+=`<div class="fg"><label>Asig. ${i+1}</label><select onchange="calcHoras()">${opts}</select></div>`;
+    container.innerHTML+=`<div class="fg"><label>Asig. ${i+1}</label>
+      <div class="asig-combo">
+        <input type="text" class="asig-search" placeholder="— Sin asignación —"
+          value="${asigLabel(cur).replace(/"/g,'&quot;')}" autocomplete="off"
+          onfocus="abrirAsigDD(this)" oninput="filtrarAsigDD(this)" onblur="cerrarAsigDD(this)">
+        <input type="hidden" class="asig-val" value="${cur.replace(/"/g,'&quot;')}">
+        <div class="asig-dd" style="display:none"></div>
+      </div></div>`;
   }
   updateEncomPreview();
+}
+function buildAsigOpts(q,curVal){
+  const acts=Object.keys(LISTAS.indGeneral||{}).sort();
+  const ql=q.toLowerCase();
+  const filtered=acts.filter(a=>!ql||a.toLowerCase().includes(ql));
+  return'<div class="asig-opt" data-val="" onmousedown="selAsig(this)">— Sin asignación —</div>'+
+    filtered.map(a=>`<div class="asig-opt${a===curVal?' asig-sel':''}" data-val="${a.replace(/"/g,'&quot;')}" onmousedown="selAsig(this)">${asigLabel(a)}</div>`).join('');
+}
+function abrirAsigDD(input){
+  const wrap=input.closest('.asig-combo');
+  const dd=wrap.querySelector('.asig-dd');
+  dd.innerHTML=buildAsigOpts(input.value,wrap.querySelector('.asig-val').value);
+  dd.style.display='block';
+}
+function filtrarAsigDD(input){
+  const wrap=input.closest('.asig-combo');
+  const dd=wrap.querySelector('.asig-dd');
+  dd.innerHTML=buildAsigOpts(input.value,wrap.querySelector('.asig-val').value);
+  dd.style.display='block';
+}
+function selAsig(opt){
+  const wrap=opt.closest('.asig-combo');
+  const val=opt.dataset.val;
+  wrap.querySelector('.asig-val').value=val;
+  wrap.querySelector('.asig-search').value=asigLabel(val);
+  wrap.querySelector('.asig-dd').style.display='none';
+  calcHoras();
+}
+function cerrarAsigDD(input){
+  setTimeout(()=>{
+    const dd=input.closest('.asig-combo').querySelector('.asig-dd');
+    if(dd) dd.style.display='none';
+  },150);
 }
 
 function calcHoras(){
   const container=document.getElementById('asig-container');
-  const selects=container.querySelectorAll('select');
+  const selects=container.querySelectorAll('.asig-val');
   let desc=0;
   selects.forEach(s=>{
     if(s.value&&LISTAS.indGeneral[s.value]!==undefined) desc+=parseFloat(LISTAS.indGeneral[s.value])||0;
@@ -1479,7 +1524,7 @@ function calcHoras(){
 
 function updateEncomPreview(){
   const container=document.getElementById('asig-container');
-  const selects=container.querySelectorAll('select');
+  const selects=container.querySelectorAll('.asig-val');
   const sel=[];
   selects.forEach(s=>{
     if(s.value){
@@ -1503,7 +1548,7 @@ async function guardarRevision(){
   const rut=rut_completo.split('-')[0];
   const dv=rut_completo.split('-')[1]||'';
   const container=document.getElementById('asig-container');
-  const selects=container.querySelectorAll('select');
+  const selects=container.querySelectorAll('.asig-val');
   let desc=0;
   const asigVals=Array.from(selects).map(s=>{
     if(s.value&&LISTAS.indGeneral[s.value]!==undefined) desc+=parseFloat(LISTAS.indGeneral[s.value])||0;
