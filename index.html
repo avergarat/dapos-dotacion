@@ -1448,7 +1448,7 @@ function fillAsignaciones(currentAsigs){
     let opts='<option value="">— Sin asignación —</option>';
     acts.forEach(a=>{
       const h=LISTAS.indGeneral[a];
-      opts+=`<option value="${a}"${a===cur?' selected':''}>${a} (${h}h)</option>`;
+      opts+=`<option value="${a}"${a===cur?' selected':''}>${a} (${+parseFloat(h).toFixed(2)}h)</option>`;
     });
     container.innerHTML+=`<div class="fg"><label>Asig. ${i+1}</label><select onchange="calcHoras()">${opts}</select></div>`;
   }
@@ -1477,7 +1477,7 @@ function updateEncomPreview(){
   selects.forEach(s=>{
     if(s.value){
       const h=LISTAS.indGeneral[s.value];
-      sel.push(h!==undefined?`${s.value} (${h}h)`:s.value);
+      sel.push(h!==undefined?`${s.value} (${+parseFloat(h).toFixed(2)}h)`:s.value);
     }
   });
   document.getElementById('rm-encom-text').textContent=sel.length?sel.join(' · '):'—';
@@ -1514,7 +1514,7 @@ async function guardarRevision(){
   // Construir texto concatenado de ENCOMENDACIONES para fácil lectura
   const encomTexto=asigVals.filter(Boolean).map(a=>{
     const h=LISTAS.indGeneral[a];
-    return h!==undefined?`${a} (${h}h)`:a;
+    return h!==undefined?`${a} (${+parseFloat(h).toFixed(2)}h)`:a;
   }).join(' · ');
 
   const data={
