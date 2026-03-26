@@ -621,12 +621,19 @@ async function cargarDatos() {
     LISTAS = (listas && typeof listas === 'object') ? listas : { cargos:[], unidades:[], indGeneral:{} };
     REVISION_MAP = (revisionMap && typeof revisionMap === 'object' && !Array.isArray(revisionMap)) ? revisionMap : {};
     // Cargar unidades desde la hoja "UNIDADES CESFAM" del servidor
-    if (unidadesMap && typeof unidadesMap === 'object' && !Array.isArray(unidadesMap) && Object.keys(unidadesMap).length > 0) {
+    // Validar que sea un objeto real con CESFAM como claves (no un {error:...} u otro objeto inválido)
+    const esEstructuraValida = unidadesMap &&
+      typeof unidadesMap === 'object' &&
+      !Array.isArray(unidadesMap) &&
+      !unidadesMap.error &&
+      Object.keys(unidadesMap).length > 0 &&
+      Object.values(unidadesMap).some(v => v && typeof v === 'object' && !Array.isArray(v));
+    if (esEstructuraValida) {
       ESTRUCTURA = unidadesMap;
       CENTROS = Object.keys(ESTRUCTURA).sort();
       console.log('Unidades cargadas desde servidor:', CENTROS.length, 'centros');
     } else {
-      console.warn('getUnidades no disponible — usando estructura local embebida');
+      console.warn('getUnidades no disponible o inválido — usando estructura local embebida');
     }
     if (!LISTAS.cargos) LISTAS.cargos = [];
     if (!LISTAS.unidades) LISTAS.unidades = [];
