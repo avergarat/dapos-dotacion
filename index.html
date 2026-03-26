@@ -481,6 +481,34 @@ tr:hover td{background:#fafbfd}
       <div class="fg"><label>Unidad Específica</label><input id="rm-unidad-esp" type="text" placeholder="Detalle adicional (opcional)"></div>
     </div>
 
+    <!-- Reasignación a otro Centro de Salud -->
+    <div class="msec">
+      <div class="msec-title">Reasignación a Centro de Salud</div>
+      <div class="delta-banner warn" id="rm-alert-reasign" style="display:none">
+        ⚠ <strong>Este funcionario pertenece a otro centro.</strong> Este funcionario está registrado en un centro de salud diferente al que actualmente se está revisando. Puedes reasignarlo al centro correcto utilizando el selector de abajo.
+      </div>
+      <div class="fg2">
+        <div class="fg">
+          <label>Centro de Salud Actual</label>
+          <input id="rm-cesfam-actual" type="text" readonly style="background:var(--mist)">
+        </div>
+        <div class="fg">
+          <label>Centro a Revisar (actual)</label>
+          <input id="rm-cesfam-revisando" type="text" readonly style="background:var(--mist)">
+        </div>
+      </div>
+      <div class="fg">
+        <label>Reasignar a Centro de Salud (si corresponde)</label>
+        <select id="rm-cesfam-nuevo" onchange="chequearReasign()">
+          <option value="">← Sin cambio, dejar en su centro actual</option>
+        </select>
+      </div>
+      <div id="rm-reasign-info" style="display:none;background:var(--teal3);border:1px solid #a8d9d1;border-left:3px solid var(--teal);border-radius:0 7px 7px 0;padding:12px 14px;font-size:.82rem;color:var(--ink2);margin-top:8px;line-height:1.5">
+        <strong>✓ Centro de destino seleccionado:</strong><br>
+        El funcionario será reasignado a <span id="rm-reasign-destino" style="font-weight:700;color:var(--teal)">—</span> cuando guardes los cambios.
+      </div>
+    </div>
+
     <!-- Horas -->
     <div class="msec">
       <div class="msec-title">Horas</div>
@@ -1206,7 +1234,10 @@ function renderRevList(){
   if(estado==='pendiente')f=f.filter(x=>!esRevisado(x));
   const tb=document.getElementById('tb-rev'); tb.innerHTML='';
   f.forEach(x=>{
-    const badge=esRevisado(x)?'<span class="rev-ok">✓ Revisado</span>':'<span class="rev-pend">⏳ Pendiente</span>';
+    const rut=x.rut_completo.split('-')[0];
+    const rev=REVISION_MAP[rut]||{};
+    const reasignado=rev.cesfam_nuevo&&rev.cesfam_nuevo!==x.cesfam;
+    const badge=esRevisado(x)?reasignado?`<span class="rev-ok" title="Reasignado a ${rev.cesfam_nuevo}">✓ Reasignado</span>`:'<span class="rev-ok">✓ Revisado</span>':'<span class="rev-pend">⏳ Pendiente</span>';
     tb.innerHTML+=`<tr>
       <td>${x.rut_completo}</td>
       <td><strong>${x.nombre}</strong></td>
@@ -1243,6 +1274,23 @@ function editarPersona(rutCompleto){
   const asigs=h.en?h.en.split(' | '):[];
   fillAsignaciones(asigs);
   document.getElementById('rm-obs').value='';
+  
+  // Reasignación - Poblar dropdown con todos los centros
+  const cesfamActual=x.cesfam;
+  document.getElementById('rm-cesfam-actual').value=cesfamActual;
+  document.getElementById('rm-cesfam-revisando').value=revCesfamActual;
+  const selReasign=document.getElementById('rm-cesfam-nuevo');
+  selReasign.innerHTML='<option value="">← Sin cambio, dejar en su centro actual</option>';
+  CENTROS.forEach(c=>{
+    if(c!==cesfamActual){
+      const opt=document.createElement('option');
+      opt.value=c;
+      opt.textContent=c;
+      selReasign.appendChild(opt);
+    }
+  });
+  chequearReasign();
+  
   calcHoras();
   document.getElementById('rev-modal').classList.add('open');
 }
@@ -1291,6 +1339,26 @@ function filtrarUnidad2(currentUnidad2){
     const selected=(currentUnidad2&&currentUnidad2.toUpperCase().includes(s.slice(0,8).toUpperCase()))?'selected':'';
     sel2.innerHTML+=`<option value="${s}" ${selected}>${s}</option>`;
   });
+}
+
+function chequearReasign(){
+  const cesfamActual=document.getElementById('rm-cesfam-actual').value;
+  const cesfamRevisando=document.getElementById('rm-cesfam-revisando').value;
+  const cesfamNuevo=document.getElementById('rm-cesfam-nuevo').value;
+  const alertEl=document.getElementById('rm-alert-reasign');
+  const infoEl=document.getElementById('rm-reasign-info');
+  const destinoEl=document.getElementById('rm-reasign-destino');
+  
+  // Mostrar alerta si el funcionario no pertenece al centro siendo revisado
+  const mostrarAlerta=cesfamActual!==cesfamRevisando&&!cesfamNuevo;
+  alertEl.style.display=mostrarAlerta?'block':'none';
+  
+  // Mostrar info de confirmación si se seleccionó un nuevo centro
+  const mostrarInfo=!!cesfamNuevo;
+  infoEl.style.display=mostrarInfo?'block':'none';
+  if(mostrarInfo&&destinoEl){
+    destinoEl.textContent=cesfamNuevo;
+  }
 }
 
 function fillAsignaciones(currentAsigs){
@@ -1360,9 +1428,14 @@ async function guardarRevision(){
   const horasT=parseFloat(document.getElementById('rm-horas-t').value)||0;
   const mod=parseFloat(document.getElementById('rm-modif').value)||0;
   const hc=horasT-desc+mod;
+  
+  // Obtener el nuevo centro de salud si fue reasignado
+  const cesfamNuevo=document.getElementById('rm-cesfam-nuevo').value||null;
+  const cesfamFinal=cesfamNuevo||revPersonaActual.cesfam;
+  
   const data={
     'RUT':rut,'DV':dv,
-    'CESFAM':revPersonaActual.cesfam,
+    'CESFAM':cesfamFinal,
     'NOMBRE PROFESIONAL':revPersonaActual.nombre,
     'DESCRIPCIÓN DE PLANTA':document.getElementById('rm-planta').value,
     'CARGO':document.getElementById('rm-cargo').value,
@@ -1373,7 +1446,8 @@ async function guardarRevision(){
     'Total Descuentos semanal (horas)':desc,
     'Total Horas Clínicas':hc,
     'MODIFICAICONES CENTRO (SUMA O RESTA HORAS)':mod,
-    'OBSERVACIONES':document.getElementById('rm-obs').value
+    'OBSERVACIONES':document.getElementById('rm-obs').value,
+    'REASIGNACION_CENTRO':cesfamNuevo?'Sí':'No'
   };
   asigVals.forEach((a,i)=>{data[`ASIGNACION ${i+1}`]=a;});
   try{
@@ -1386,6 +1460,12 @@ async function guardarRevision(){
     if(result.ok){
       HORAS_MAP[rut]={hc,dc:desc,hk:horasK,en:asigVals.filter(Boolean).join(' | ')};
       REVISION_MAP[rut]={hc,dc:desc,hk:horasK,en:asigVals.filter(Boolean).join(' | ')};
+      
+      // Actualizar el centro de salud si fue reasignado
+      if(cesfamNuevo){
+        REVISION_MAP[rut].cesfam_nuevo=cesfamNuevo;
+      }
+      
       detectarCambiosDotacion();
       const idx=FUNC.findIndex(f=>f.rut_completo===rut_completo);
       if(idx>=0){
@@ -1396,6 +1476,7 @@ async function guardarRevision(){
         const u2Val=document.getElementById('rm-unidad2').value;
         if(cargVal)FUNC[idx].cargo=cargVal;
         if(u2Val)FUNC[idx].unidad2=u2Val;
+        if(cesfamNuevo)FUNC[idx].cesfam=cesfamNuevo;
       }
       cerrarRevModal();
       renderRevList();
