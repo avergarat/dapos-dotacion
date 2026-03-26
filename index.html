@@ -582,8 +582,10 @@ function procesarCargo(titulo, descripcionFuncion) {
   }
   
   // Limpiar el formato: quitar número y guión inicial (ej: "1001-CIRUJANO DENTISTA" → "CIRUJANO DENTISTA")
-  // Patrón: uno o más dígitos, seguido de guión, seguido del resto
   cargoLimpio = cargoLimpio.replace(/^\d+-/, '');
+  
+  // Normalizar a MAYÚSCULAS
+  cargoLimpio = cargoLimpio.toUpperCase();
   
   return cargoLimpio;
 }
