@@ -621,13 +621,17 @@ async function cargarDatos() {
     LISTAS = (listas && typeof listas === 'object') ? listas : { cargos:[], unidades:[], indGeneral:{} };
     REVISION_MAP = (revisionMap && typeof revisionMap === 'object' && !Array.isArray(revisionMap)) ? revisionMap : {};
     // Cargar unidades desde la hoja "UNIDADES CESFAM" del servidor
-    // Validar que sea un objeto real con CESFAM como claves (no un {error:...} u otro objeto inválido)
+    // Validar que sea un objeto real con CESFAM como claves:
+    // - sin propiedades de respuesta API ('ok', 'msg', 'error')
+    // - todos los valores deben ser objetos anidados (no primitivos ni arrays)
     const esEstructuraValida = unidadesMap &&
       typeof unidadesMap === 'object' &&
       !Array.isArray(unidadesMap) &&
-      !unidadesMap.error &&
+      !('ok' in unidadesMap) &&
+      !('msg' in unidadesMap) &&
+      !('error' in unidadesMap) &&
       Object.keys(unidadesMap).length > 0 &&
-      Object.values(unidadesMap).some(v => v && typeof v === 'object' && !Array.isArray(v));
+      Object.values(unidadesMap).every(v => v && typeof v === 'object' && !Array.isArray(v));
     if (esEstructuraValida) {
       ESTRUCTURA = unidadesMap;
       CENTROS = Object.keys(ESTRUCTURA).sort();
