@@ -1346,14 +1346,26 @@ function editarPersona(rutCompleto){
 function fillCargoDropdown(currentCargo){
   const sel=document.getElementById('rm-cargo');
   sel.innerHTML='<option value="">Seleccionar...</option>';
-  const cargos=LISTAS.cargos||[];
-  cargos.forEach(c=>{
-    const val=c.hom||c.cargo;
-    const label=c.hom?`${c.hom}`:(c.cargo||'');
-    const sel_=((val===currentCargo)||(c.cargo===currentCargo))?'selected':'';
-    sel.innerHTML+=`<option value="${val}" ${sel_}>${label}</option>`;
+  
+  // Obtener cargos únicos desde FUNC
+  const cargosUnicos = new Set();
+  FUNC.forEach(f => {
+    if(f.cargo && f.cargo.trim()) {
+      cargosUnicos.add(f.cargo);
+    }
   });
-  if(currentCargo&&!cargos.some(c=>c.hom===currentCargo||c.cargo===currentCargo)){
+  
+  // Convertir a array y ordenar alfabéticamente
+  const cargosList = Array.from(cargosUnicos).sort();
+  
+  // Poblar el dropdown con cargos únicos
+  cargosList.forEach(cargo => {
+    const sel_=(cargo===currentCargo)?'selected':'';
+    sel.innerHTML+=`<option value="${cargo}" ${sel_}>${cargo}</option>`;
+  });
+  
+  // Si el cargo actual no está en la lista, agregarlo
+  if(currentCargo && !cargosUnicos.has(currentCargo)){
     sel.innerHTML+=`<option value="${currentCargo}" selected>${currentCargo}</option>`;
   }
 }
