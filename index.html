@@ -393,6 +393,7 @@ tr:hover td{background:#fafbfd}
               <div class="searchrow">
                 <input type="text" id="rev-search" placeholder="Buscar RUT o nombre..." oninput="renderRevList()" style="width:180px">
                 <select id="rev-unidad" onchange="renderRevList()"><option value="">Todas las unidades</option></select>
+                <select id="rev-cargo" onchange="renderRevList()"><option value="">Todos los cargos</option></select>
                 <select id="rev-calidad" onchange="renderRevList()">
                   <option value="">Todas las calidades</option>
                   <option>TITULARES</option><option>CONTRATADOS</option><option>SUPLENTE</option>
@@ -1274,6 +1275,10 @@ function abrirRevision(c){
   const sel=document.getElementById('rev-unidad');
   sel.innerHTML='<option value="">Todas las unidades</option>';
   if(ESTRUCTURA[c]) Object.keys(ESTRUCTURA[c]).forEach(u=>sel.innerHTML+=`<option>${u}</option>`);
+  const cargos=[...new Set(f.map(x=>x.cargo).filter(Boolean))].sort();
+  const selC=document.getElementById('rev-cargo');
+  selC.innerHTML='<option value="">Todos los cargos</option>';
+  cargos.forEach(g=>selC.innerHTML+=`<option>${g}</option>`);
   renderRevList();
 }
 
@@ -1286,9 +1291,11 @@ function volverRevision(){
 function renderRevList(){
   const q=(document.getElementById('rev-search').value||'').toLowerCase();
   const unidad=document.getElementById('rev-unidad').value;
+  const cargo=document.getElementById('rev-cargo').value;
   const calidad=document.getElementById('rev-calidad').value;
   const estado=document.getElementById('rev-estado').value;
   let f=byC(revCesfamActual);
+  if(cargo)f=f.filter(x=>x.cargo===cargo);
   if(calidad)f=f.filter(x=>x.calidad===calidad);
   if(unidad&&ESTRUCTURA[revCesfamActual]){
     const des=ESTRUCTURA[revCesfamActual][unidad]||[];
