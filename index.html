@@ -572,6 +572,22 @@ function getAppName(cesfamDB) {
   return cesfamDB;
 }
 
+// Función para limpiar el título y obtener el cargo correcto
+function procesarCargo(titulo, descripcionFuncion) {
+  let cargoLimpio = titulo ? titulo.toString().trim() : '';
+  
+  // Si el título es "s/d" o comienza con "1-SIN TITULO", usar Descripción Función
+  if (cargoLimpio === 's/d' || cargoLimpio === '1-SIN TITULO' || cargoLimpio.startsWith('1-SIN TITULO')) {
+    cargoLimpio = (descripcionFuncion || '').toString().trim();
+  }
+  
+  // Limpiar el formato: quitar número y guión inicial (ej: "1001-CIRUJANO DENTISTA" → "CIRUJANO DENTISTA")
+  // Patrón: uno o más dígitos, seguido de guión, seguido del resto
+  cargoLimpio = cargoLimpio.replace(/^\d+-/, '');
+  
+  return cargoLimpio;
+}
+
 const API_URL = 'https://script.google.com/macros/s/AKfycbzFMjHvjkix7SNf-FdiBfZfkeB_n6ac0dkJgy3KBPqMJdb9crEVTRZMUDiYMIHRjXqrYg/exec';
 let FUNC = [];
 let HORAS_MAP = {};
@@ -639,19 +655,21 @@ async function cargarDatos() {
       const rut = (f['Rut']||'').toString().trim().replace(/\./g,'');
       const h = HORAS_MAP[rut] || {};
       const hk = parseFloat(h.hk || f['Número horas'] || 44);
+      const titulo = (f['Título']||'').toString().trim();
+      const descripcionFuncion = (f['Descripción Función']||'').toString().trim();
       return {
         rut_completo: rut + '-' + (f['Dv'] != null ? f['Dv'] : '').toString().trim(),
         nombre: (f['Nombre Funcionario']||'').toString().trim(),
         planta: (f['Descripción Planta']||'').toString().trim(),
         calidad: (f['Descripción Calidad Jurídica']||'').toString().trim(),
-        titulo: (f['Título']||'').toString().trim(),
+        titulo: titulo,
         horas: hk,
         horas_clinicas: parseFloat(h.hc !== undefined ? h.hc : hk),
         descuento: parseFloat(h.dc || 0),
         encomendaciones: (h.en || ''),
         cesfam: (f['Descripción Unidad']||'').toString().trim(),
         unidad2: (f['Descripción Unidad 2']||'').toString().trim(),
-        cargo: (f['Descripción Cargo']||'').toString().trim(),
+        cargo: procesarCargo(titulo, descripcionFuncion),
         inicio: (f['Fecha Inicio Contrato']||'').toString().slice(0,10),
         genero: (f['Género']||'').toString().trim()
       };
